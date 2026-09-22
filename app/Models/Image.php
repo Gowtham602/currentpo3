@@ -11,6 +11,7 @@ class Image extends Model
 
     protected $fillable = [
         'user_id',
+        'application_access_id',
         'district_id',
         'image_name',
         'original_url',
@@ -57,4 +58,11 @@ class Image extends Model
             'image_id'
         );
     }
+    public function applicationAccess()
+{
+    return $this->belongsTo(
+        ApplicationAccess::class,
+        'application_access_id'
+    );
+}
 }

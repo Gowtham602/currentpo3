@@ -1,13 +1,14 @@
-<?php
 
+
+<?php
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\ImageController;
 use App\Http\Controllers\PdfController;
 use App\Http\Controllers\ShortUrlController;
 use App\Http\Controllers\SmsCreditController;
+use App\Http\Controllers\Admin\ApplicationAccessController;
 
-use App\Http\Controllers\Admin\UrlShortenerController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -17,8 +18,8 @@ use App\Http\Controllers\Admin\UrlShortenerController;
 //  HOME → MERGE PAGE
 Route::get('/', function () {
     // return view('imageupload'); // merge UI
-    return redirect()->route('login');
-});
+       return redirect()->route('login');
+});      
 
 //  MERGE PROCESS
 Route::post('/process-images', [ImageController::class, 'process'])
@@ -37,193 +38,118 @@ Route::post('/save-image', [ImageController::class, 'saveImage'])->name('save.im
 // =========================
 // AUTH REQUIRED
 // =========================
-// Route::middleware(['auth'])->group(function () {
-
-//     DASHBOARD
-//     Route::get('/dashboard', [ImageController::class, 'index'])
-//         ->name('dashboard');
-
-//     MOBILE ANALYTICS
-//     Route::get('/next', [ImageController::class, 'mobile'])
-//         ->name('next');
-
-//     Route::get('/edit/{id}',[ImageController::class,"edit"])->name('edit');
-
-//     Route::get('/get-images', [ImageController::class, 'getImages'])->name('get.images');
-//     Route::get('/image/{short_code}/edit', [ImageController::class, 'edit'])->name('image.edit');
-//     Route::put('/image/{short_code}', [ImageController::class, 'update'])->name('image.update');
-//     Route::delete('/image/{id}', [ImageController::class, 'destroy'])->name('image.destroy');
-
-//     Route::get('/today-viewers/{image}', [ImageController::class, 'todayViewers'])->name('today.viewers');
-
-//     analyticsview
-//     Route::get('/image/{image}/analysis', [ImageController::class, 'analysis'])->name('image.analysis');
-
-//     UPLOAD (OLD FEATURE)
-//     Route::post('/upload', [ImageController::class, 'store'])->name('image.upload');
-
-//     Route::get('/pdf', [PdfController::class, 'index'])->name('pdf.index');
-
-//     Route::post('/pdf/upload', [PdfController::class, 'upload'])->name('pdf.upload');
-
-//     Route::post('/pdf/add-image',[PdfController::class, 'addImage'])->name('pdf.add.image');
-
-//     Route::post('/pdf/delete-page',[PdfController::class, 'deletePage'])->name('pdf.delete.page');
-
-//     Route::post('/pdf/reorder',[PdfController::class, 'reorder'])->name('pdf.reorder');
-
-//     Route::get('/pdf/pages',[PdfController::class, 'pages'])->name('pdf.pages');
-
-//     Route::post('/pdf/generate', [PdfController::class, 'generate'])->name('pdf.generate');
-
-//     save 
-//     Route::post('/pdf/save-image', [PdfController::class, 'saveImage'])->name('pdf.save.image');
-
-//     Route::get('/pdf/data-list', [PdfController::class, 'list'])->name('images.list');
-
-
-
-
-//     SmsCredit
-//     Route::get('/sms-credit', [SmsCreditController::class, 'index'])
-//         ->name('sms.index');
-
-//     Route::post('/sms-credit/store', [SmsCreditController::class, 'store'])
-//         ->name('sms.store');
-
-    
-//         Route::get('/sms/list', [SmsCreditController::class, 'list'])->name('sms.list');
-
-//     Route::get('/sms-credit/report', [SmsCreditController::class, 'report'])
-//     ->name('sms.report');
-
-//     Route::post('/sms-credit/report/data', [SmsCreditController::class, 'reportData'])
-//     ->name('sms.report.data');
-
-//    Route::get('/sms-credit/report/pdf', [SmsCreditController::class, 'reportPdf'])
-//     ->name('sms.report.pdf');
-
-// Route::get('/sms-credit/report/excel', [SmsCreditController::class, 'reportExcel'])
-//     ->name('sms.report.excel');
-
-// });
-
 Route::middleware(['auth'])->group(function () {
 
-    /*
-    |--------------------------------------------------------------------------
-    | SUPERADMIN + ADMIN
-    |--------------------------------------------------------------------------
-    */
-Route::middleware('role:SuperAdmin,Admin')->group(function () {
+    // DASHBOARD
+    Route::get('/dashboard', [ImageController::class, 'index'])
+        ->name('dashboard');
 
-    Route::get('/dashboard', [ImageController::class,'index'])->name('dashboard');
+    // MOBILE ANALYTICS
+    Route::get('/next', [ImageController::class, 'mobile'])
+        ->name('next');
+        
+    Route::get('/mobile-data', [ImageController::class, 'mobileData'])->name('mobile.data');    
 
-    Route::get('/next', [ImageController::class,'mobile'])->name('next');
+    Route::get('/get-images', [ImageController::class, 'getImages'])->name('get.images');
+    
+    //edit 
+    Route::get('/image/{short_code}/edit', [ImageController::class, 'edit'])->name('image.edit');
+    Route::put('/image/{short_code}', [ImageController::class, 'update'])->name('image.update');
+    Route::delete('/image/{id}', [ImageController::class, 'destroy'])->name('image.destroy');
 
-    Route::post('/process-images', [ImageController::class,'process'])->name('image.process');
+    Route::get('/today-viewers/{image}', [ImageController::class, 'todayViewers'])->name('today.viewers');
 
-    Route::post('/save-image', [ImageController::class,'saveImage'])->name('save.image');
+    //analyticsview
+    Route::get('/image/{image}/analysis', [ImageController::class, 'analysis'])->name('image.analysis');
 
-    Route::get('/get-images', [ImageController::class,'getImages'])->name('get.images');
-
-    Route::get('/image/{short_code}/edit',[ImageController::class,'edit'])->name('image.edit');
-
-    Route::put('/image/{short_code}',[ImageController::class,'update'])->name('image.update');
-
-    Route::delete('/image/{id}',[ImageController::class,'destroy'])->name('image.destroy');
-
-    Route::post('/upload',[ImageController::class,'store'])->name('image.upload');
-
-    Route::get('/pdf',[PdfController::class,'index'])->name('pdf.index');
-
-    Route::post('/pdf/upload',[PdfController::class,'upload'])->name('pdf.upload');
-
-    Route::post('/pdf/add-image',[PdfController::class,'addImage'])->name('pdf.add.image');
-
-    Route::post('/pdf/delete-page',[PdfController::class,'deletePage'])->name('pdf.delete.page');
-
-    Route::post('/pdf/reorder',[PdfController::class,'reorder'])->name('pdf.reorder');
-
-    Route::get('/pdf/pages',[PdfController::class,'pages'])->name('pdf.pages');
-
-    Route::post('/pdf/generate',[PdfController::class,'generate'])->name('pdf.generate');
-
-    Route::post('/pdf/save-image',[PdfController::class,'saveImage'])->name('pdf.save.image');
-
-    Route::get('/pdf/data-list',[PdfController::class,'list'])->name('images.list');
-
-
-      // Show URL Shortener page
-    Route::get(
-        '/url-shortener',
-        [ImageController::class, 'urlShortener']
+    // UPLOAD (OLD FEATURE)
+    Route::post('/upload', [ImageController::class, 'store'])
+        ->name('image.upload');
+        
+        
+        
+    Route::get( '/url-shortener', [ImageController::class, 'urlShortener']
     )->name('url-shortener.index');
 
     // Create Short URL
-    Route::post(
-        '/url-shortener',
-        [ImageController::class, 'saveUrl']
+    Route::post(  '/url-shortener', [ImageController::class, 'saveUrl']
     )->name('url-shortener.store');
+        
+    Route::get('/pdf', [PdfController::class, 'index'])
+    ->name('pdf.index');
 
-}); 
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | SMS CREDIT
-    |--------------------------------------------------------------------------
-    */
-
-    Route::middleware('role:SuperAdmin,Admin,Staff')->group(function () {
-
-        Route::get('/sms-credit',[SmsCreditController::class,'index'])->name('sms.index');
-
-        Route::post('/sms-credit/store',[SmsCreditController::class,'store'])->name('sms.store');
-
-        Route::get('/sms/list',[SmsCreditController::class,'list'])->name('sms.list');
-
-    });
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | REPORTS
-    |--------------------------------------------------------------------------
-    */
-
-    Route::middleware('role:SuperAdmin,Admin,Staff,Auditor')->group(function () {
-
-        Route::get('/sms-credit/report',[SmsCreditController::class,'report'])->name('sms.report');
-
-        Route::post('/sms-credit/report/data',[SmsCreditController::class,'reportData'])->name('sms.report.data');
-
-        Route::get('/sms-credit/report/pdf',[SmsCreditController::class,'reportPdf'])->name('sms.report.pdf');
-
-        Route::get('/sms-credit/report/excel',[SmsCreditController::class,'reportExcel'])->name('sms.report.excel');
-
-    });
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | IMAGE LIST (Auditor can only view)                                                                                                                                                                                                                                      
-    |--------------------------------------------------------------------------
-    */
-
-    Route::middleware('role:SuperAdmin,Admin,Auditor')->group(function () {
-
-        Route::get('/get-images',[ImageController::class,'getImages'])->name('get.images');
-
-        Route::get('/image/{image}/analysis',[ImageController::class,'analysis'])->name('image.analysis');
-
-        Route::get('/today-viewers/{image}',[ImageController::class,'todayViewers'])->name('today.viewers');
-
-    }); 
-
+    Route::post('/pdf/upload', [PdfController::class, 'upload'])
+        ->name('pdf.upload');
     
+    Route::post('/pdf/add-image',
+        [PdfController::class,'addImage'])
+        ->name('pdf.add.image');
+    
+    Route::post('/pdf/delete-page',
+        [PdfController::class,'deletePage'])
+        ->name('pdf.delete.page');
+    
+    Route::post('/pdf/reorder',
+        [PdfController::class,'reorder'])
+        ->name('pdf.reorder');
+    
+    Route::get('/pdf/pages',
+        [PdfController::class,'pages'])
+        ->name('pdf.pages');
+    
+    Route::post('/pdf/generate', [PdfController::class,'generate'])
+        ->name('pdf.generate');
+    
+        //save 
+    Route::post('/pdf/save-image', [PdfController::class, 'saveImage'])
+        ->name('pdf.save.image');
+    
+    Route::get('/pdf/data-list',[PdfController::class,'list'])->name('images.list');  
+    
+    
+    //reports
+    
+    // SmsCredit
+    Route::get('/sms-credit', [SmsCreditController::class, 'index'])
+        ->name('sms.index');
 
+    Route::post('/sms-credit/store', [SmsCreditController::class, 'store'])
+        ->name('sms.store');
+
+    // Route::get('/sms-credit/list', [SmsCreditController::class, 'list'])
+    //     ->name('sms.list');
+        Route::get('/sms/list', [SmsCreditController::class, 'list'])->name('sms.list');
+
+    Route::get('/sms-credit/report', [SmsCreditController::class, 'report'])
+    ->name('sms.report');
+
+    Route::post('/sms-credit/report/data', [SmsCreditController::class, 'reportData'])
+    ->name('sms.report.data');
+
+   Route::get('/sms-credit/report/pdf', [SmsCreditController::class, 'reportPdf'])
+    ->name('sms.report.pdf');
+
+Route::get('/sms-credit/report/excel', [SmsCreditController::class, 'reportExcel'])
+    ->name('sms.report.excel');
+
+    Route::get('/application-access',
+        [ApplicationAccessController::class, 'index']
+    )->name('application-access.index');
+
+    Route::get('/application-access/create',
+        [ApplicationAccessController::class, 'create']
+    )->name('application-access.create');
+
+    Route::post('/application-access',
+        [ApplicationAccessController::class, 'store']
+    )->name('application-access.store');
+    
+    Route::post('/application-access/{id}/regenerate-token',
+    [ApplicationAccessController::class, 'regenerateToken']
+)->name('application-access.regenerate-token');
 });
+
+
 
 // PROFILE
 Route::middleware('auth')->group(function () {
@@ -232,4 +158,4 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

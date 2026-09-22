@@ -1,19 +1,34 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\UrlApiController;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
-|
-*/
+Route::prefix('webhook')
+    ->middleware('application.api')
+    ->group(function () {
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
+    
+
+        Route::get(
+            '/districts',
+            [UrlApiController::class, 'districts']
+        );
+
+
+    
+        Route::get(
+            '/original-url',
+            [UrlApiController::class, 'index']
+        );
+
+        Route::post(
+            '/original-url',
+            [UrlApiController::class, 'store']
+        );
+
+        Route::put(
+            '/original-url/{short_code}',
+            [UrlApiController::class, 'update']
+        );
+
+    });
