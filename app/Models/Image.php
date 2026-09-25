@@ -18,14 +18,23 @@ class Image extends Model
         'file_path',
         'short_code',
         'click_count',
+        'expires_at',
+        'is_active',
+    ];
+
+    protected $casts = [
+    'expires_at' => 'date',
+    'is_active' => 'boolean',
     ];
 
     /*
     |--------------------------------------------------------------------------
-    | User Relationship
+    | User Relationship 
     |--------------------------------------------------------------------------
     */
 
+
+    
     public function user()
     {
         return $this->belongsTo(User::class);

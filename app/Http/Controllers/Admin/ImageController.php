@@ -166,95 +166,168 @@ public function index()
         return back()->with('success', 'Image uploaded successfully!');
     }
     // merge and create short url
-    public function redirect_old($code)
-    {
-        /*
-    |--------------------------------------------------------------------------
-    | 1. Check Image Shortener
-    |--------------------------------------------------------------------------
-    */
-        $image = Image::where('short_code', $code)->first();
 
-        if ($image) {
-
-            $image->increment('click_count');
-
-            $agent = new Agent();
-
-            $device = $agent->isMobile()
-                ? 'Mobile'
-                : ($agent->isTablet() ? 'Tablet' : 'Desktop');
-
-            $browser = $agent->browser();
-            $ip = request()->ip();
-
-            $location = Location::get($ip);
-            $country = $location ? $location->countryName : 'Unknown';
-
-            ImageClick::create([
-                'image_id'    => $image->id,
-                'ip_address'  => $ip,
-                'browser'     => $browser,
-                'device_type' => $device,
-                'country'     => $country,
-            ]);
-
-            return redirect(asset('storage/' . $image->file_path));
-        }
-
-        /*
-    |--------------------------------------------------------------------------
-    | 2. Check PDF Shortener
-    |--------------------------------------------------------------------------
-    */
-        $pdf = \App\Models\Pdf::where('short_code', $code)->first();
-
-        if ($pdf) {
-
-            $pdf->increment('click_count');
-
-            return redirect(asset('storage/' . $pdf->file_path));
-        }
-
-        /*
-    |--------------------------------------------------------------------------
-    | 3. Check External upload_image Database
-    |--------------------------------------------------------------------------
-    */
-        $searchUrl = "https://po3.in/" . $code;
-
-        $uploadImage = DB::connection('images')
-            ->table('upload_image')
-            ->where('bit_url', $searchUrl)
-            ->first();
-
-        if ($uploadImage) {
-
-            return redirect("https://pothysadv.in/pothys-imgupload-api/images/" . $uploadImage->image_name);
-        }
-
-        abort(404);
-    }
 
 
     //  today 27.8.26
-    public function redirect($code)
+//     public function redirect($code)
+// {
+//     /*
+//     |--------------------------------------------------------------------------
+//     | Find Short Code in images table
+//     |--------------------------------------------------------------------------
+//     */
+
+//     $image = Image::where('short_code', $code)->first();
+
+//     if (!$image) {
+
+//         /*
+//         |--------------------------------------------------------------------------
+//         | Check old upload_image table
+//         |--------------------------------------------------------------------------
+//         */
+
+//         $searchUrl = "https://po3.in/" . $code;
+
+//         $uploadImage = DB::connection('images')
+//             ->table('upload_image')
+//             ->where('bit_url', $searchUrl)
+//             ->first();
+
+//         if ($uploadImage) {
+
+//             return redirect(
+//                 "https://pothysadv.in/pothys-imgupload-api/images/"
+//                 . $uploadImage->image_name
+//             );
+//         }
+
+//         abort(404);
+//     }
+
+//     /*
+//     |--------------------------------------------------------------------------
+//     | Increase Click Count
+//     |--------------------------------------------------------------------------
+//     */
+
+//     $image->increment('click_count');
+
+
+//     /*
+//     |--------------------------------------------------------------------------
+//     | Device Information
+//     |--------------------------------------------------------------------------
+//     */
+
+//     $agent = new Agent();
+
+//     $device = $agent->isMobile()
+//         ? 'Mobile'
+//         : ($agent->isTablet()
+//             ? 'Tablet'
+//             : 'Desktop');
+
+
+//     /*
+//     |--------------------------------------------------------------------------
+//     | Browser & IP
+//     |--------------------------------------------------------------------------
+//     */
+
+//     $browser = $agent->browser();
+
+//     $ip = request()->ip();
+
+
+//     /*
+//     |--------------------------------------------------------------------------
+//     | Location
+//     |--------------------------------------------------------------------------
+//     */
+
+//     $location = Location::get($ip);
+    
+
+//     $country = $location
+//         ? $location->countryName
+//         : 'Unknown';
+
+//     $city = $location?->cityName ?? 'Unknown';
+
+
+//     /*
+//     |--------------------------------------------------------------------------
+//     | Save Click Analytics
+//     |--------------------------------------------------------------------------
+//     */
+
+//     ImageClick::create([
+//         'image_id'    => $image->id,
+//         'ip_address'  => $ip,
+//         'browser'     => $browser,
+//         'device_type' => $device,
+//         'country'     => $country,
+//         'city'        => $city,
+//     ]);
+
+
+//     /*
+//     |--------------------------------------------------------------------------
+//     | SHORT URL → EXTERNAL URL
+//     |--------------------------------------------------------------------------
+//     */
+
+//     if (!empty($image->original_url)) {
+
+//         return redirect()->away(
+//             $image->original_url
+//         );
+//     }
+
+
+//     /*
+//     |--------------------------------------------------------------------------
+//     | SHORT URL → IMAGE
+//     |--------------------------------------------------------------------------
+//     */
+
+//     if (!empty($image->file_path)) {
+
+//         return redirect(
+//             asset('storage/' . $image->file_path)
+//         );
+//     }
+
+
+//     /*
+//     |--------------------------------------------------------------------------
+//     | No Destination
+//     |--------------------------------------------------------------------------
+//     */
+
+//     abort(404);
+// }
+
+public function redirect($code)
 {
     /*
     |--------------------------------------------------------------------------
-    | Find Short Code in images table
+    | Find Short Code
     |--------------------------------------------------------------------------
     */
 
     $image = Image::where('short_code', $code)->first();
 
-    if (!$image) {
 
-        /*
-        |--------------------------------------------------------------------------
-        | Check old upload_image table
-        |--------------------------------------------------------------------------
-        */
+    /*
+    |--------------------------------------------------------------------------
+    | Old upload_image table support
+    |--------------------------------------------------------------------------
+    */
+
+    if (!$image) {
 
         $searchUrl = "https://po3.in/" . $code;
 
@@ -273,6 +346,47 @@ public function index()
 
         abort(404);
     }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CHECK MANUAL ACTIVE / INACTIVE
+    |--------------------------------------------------------------------------
+    */
+
+     /*
+    |--------------------------------------------------------------------------
+    | Check Active / Deactive
+    |--------------------------------------------------------------------------
+    */
+    if (!$image->is_active) {
+
+        return redirect('https://pothysmart.com/home_');
+    }
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | CHECK EXPIRY DATE
+    |--------------------------------------------------------------------------
+    |
+    | expires_at is a DATE field.
+    | The URL remains active for the complete expiry date.
+    |
+    */
+
+   
+    if (
+        $image->expires_at &&
+        \Carbon\Carbon::parse($image->expires_at)
+            ->startOfDay()
+            ->lt(now()->startOfDay())
+    ) {
+
+        return redirect('https://pothysmart.com/home_');
+    }
+
 
     /*
     |--------------------------------------------------------------------------
@@ -316,7 +430,6 @@ public function index()
     */
 
     $location = Location::get($ip);
-    
 
     $country = $location
         ? $location->countryName
@@ -379,7 +492,6 @@ public function index()
 }
 
 
-
     // public function edit($id)
     // {
     //     // dd($id);
@@ -427,33 +539,66 @@ public function index()
 public function update(Request $request, $short_code)
 {
     $request->validate([
-        'image' => 'required|image|max:2048',
+        'image' => 'nullable|image|max:2048',
+        'expires_at' => 'nullable|date|after_or_equal:today',
     ]);
 
-     $image = Image::where('short_code', $short_code)->firstOrFail();
+    $image = Image::where('short_code', $short_code)
+        ->firstOrFail();
 
-    // Get the existing filename from the database
-    $fileName = basename($image->file_path);
 
-    // Delete the old file
-    if (Storage::disk('public')->exists($image->file_path)) {
-        Storage::disk('public')->delete($image->file_path);
+    // ==========================================
+    // UPDATE IMAGE ONLY IF NEW IMAGE SELECTED
+    // ==========================================
+
+    if ($request->hasFile('image')) {
+
+        $fileName = basename($image->file_path);
+
+        if (Storage::disk('public')->exists($image->file_path)) {
+
+            Storage::disk('public')->delete(
+                $image->file_path
+            );
+        }
+
+        $path = $request->file('image')->storeAs(
+            'images',
+            $fileName,
+            'public'
+        );
+
+        $image->file_path = $path;
     }
 
-    // Save the new image with the SAME filename
-    $path = $request->file('image')->storeAs(
-        'images',
-        $fileName,
-        'public'
-    );
 
-    // Update only if the path changed (normally it stays the same)
-    $image->update([
-        'file_path' => $path,
-    ]);
+    // ==========================================
+    // UPDATE EXPIRY DATE
+    // ==========================================
 
-    return redirect()->route('dashboard')
-        ->with('success', 'Image updated successfully.');
+    $image->expires_at = $request->expires_at;
+
+
+    // ==========================================
+    // KEEP URL ACTIVE
+    // ==========================================
+
+    $image->is_active = true;
+
+
+    // ==========================================
+    // SAVE
+    // ==========================================
+
+    $image->save();
+
+
+    return redirect()
+        ->route('dashboard')
+        ->with(
+            'success',
+            'Image updated successfully.'
+        );
 }
     public function destroy($id)
     {
@@ -649,6 +794,7 @@ public function update(Request $request, $short_code)
         $request->validate([
             'file_path'   => 'required',
             'district_id' => 'required|exists:districts,id',
+            'expires_at' => 'nullable|date|after_or_equal:today',
         ]);
 
         $district  = District::findOrFail($request->district_id);
@@ -686,7 +832,9 @@ public function update(Request $request, $short_code)
             'district_id' => $district->id,
             'image_name'  => $cleanName,
             'file_path'   => 'images/' . $newFileName,
-            'short_code'  => $shortCode
+            'short_code'  => $shortCode,
+            'expires_at' => $request->expires_at,
+            'is_active' => true,
         ]);
 
         return response()->json([
@@ -888,6 +1036,75 @@ public function urlShortener()
     return view(
         'url-shortener.index',
         compact('districts', 'urls')
+    );
+}
+
+public function updateExpiry(Request $request)
+{
+    $request->validate([
+        'image_id' => 'required|integer|exists:images,id',
+
+        'expires_at' => [
+            'nullable',
+            'date',
+            'after_or_equal:today',
+        ],
+    ]);
+
+
+    // Find image belonging to logged-in user
+
+    $image = Image::where('id', $request->image_id)
+        ->where('user_id', Auth::id())
+        ->firstOrFail();
+
+
+    // ==========================================
+    // UPDATE EXPIRY DATE
+    // ==========================================
+
+    $image->expires_at = $request->expires_at;
+
+
+    // ==========================================
+    // ACTIVE
+    // ==========================================
+
+    // If user selects a future/today date
+    // or removes expiry completely,
+    // activate the URL.
+
+    $image->is_active = true;
+
+
+    $image->save();
+
+
+    return response()->json([
+
+        'success' => true,
+
+        'message' => 'Expiry date updated successfully.',
+
+        'expires_at' => $image->expires_at,
+
+        'is_active' => $image->is_active,
+
+    ]);
+}
+
+
+ public function deactivate($id)
+{
+    $image = Image::findOrFail($id);
+
+    $image->update([
+        'is_active' => false,
+    ]);
+
+    return back()->with(
+        'success',
+        'Image URL deactivated successfully.'
     );
 }
 }

@@ -1,5 +1,3 @@
-
-
 <?php
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -18,8 +16,8 @@ use App\Http\Controllers\Admin\ApplicationAccessController;
 //  HOME → MERGE PAGE
 Route::get('/', function () {
     // return view('imageupload'); // merge UI
-       return redirect()->route('login');
-});      
+    return redirect()->route('login');
+});
 
 //  MERGE PROCESS
 Route::post('/process-images', [ImageController::class, 'process'])
@@ -47,11 +45,11 @@ Route::middleware(['auth'])->group(function () {
     // MOBILE ANALYTICS
     Route::get('/next', [ImageController::class, 'mobile'])
         ->name('next');
-        
-    Route::get('/mobile-data', [ImageController::class, 'mobileData'])->name('mobile.data');    
+
+    Route::get('/mobile-data', [ImageController::class, 'mobileData'])->name('mobile.data');
 
     Route::get('/get-images', [ImageController::class, 'getImages'])->name('get.images');
-    
+
     //edit 
     Route::get('/image/{short_code}/edit', [ImageController::class, 'edit'])->name('image.edit');
     Route::put('/image/{short_code}', [ImageController::class, 'update'])->name('image.update');
@@ -65,50 +63,58 @@ Route::middleware(['auth'])->group(function () {
     // UPLOAD (OLD FEATURE)
     Route::post('/upload', [ImageController::class, 'store'])
         ->name('image.upload');
-        
-        
-        
-    Route::get( '/url-shortener', [ImageController::class, 'urlShortener']
+
+
+
+    Route::get(
+        '/url-shortener',
+        [ImageController::class, 'urlShortener']
     )->name('url-shortener.index');
 
     // Create Short URL
-    Route::post(  '/url-shortener', [ImageController::class, 'saveUrl']
+    Route::post(
+        '/url-shortener',
+        [ImageController::class, 'saveUrl']
     )->name('url-shortener.store');
-        
+
     Route::get('/pdf', [PdfController::class, 'index'])
-    ->name('pdf.index');
+        ->name('pdf.index');
 
     Route::post('/pdf/upload', [PdfController::class, 'upload'])
         ->name('pdf.upload');
-    
-    Route::post('/pdf/add-image',
-        [PdfController::class,'addImage'])
+
+    Route::post(
+        '/pdf/add-image',
+        [PdfController::class, 'addImage']
+    )
         ->name('pdf.add.image');
-    
-    Route::post('/pdf/delete-page',
-        [PdfController::class,'deletePage'])
+
+    Route::post(
+        '/pdf/delete-page',
+        [PdfController::class, 'deletePage']
+    )
         ->name('pdf.delete.page');
-    
-    Route::post('/pdf/reorder',
-        [PdfController::class,'reorder'])
-        ->name('pdf.reorder');
-    
-    Route::get('/pdf/pages',
-        [PdfController::class,'pages'])
+
+    Route::post('/pdf/reorder',[PdfController::class, 'reorder'])->name('pdf.reorder');
+
+    Route::get(
+        '/pdf/pages',
+        [PdfController::class, 'pages']
+    )
         ->name('pdf.pages');
-    
-    Route::post('/pdf/generate', [PdfController::class,'generate'])
+
+    Route::post('/pdf/generate', [PdfController::class, 'generate'])
         ->name('pdf.generate');
-    
-        //save 
+
+    //save 
     Route::post('/pdf/save-image', [PdfController::class, 'saveImage'])
         ->name('pdf.save.image');
-    
-    Route::get('/pdf/data-list',[PdfController::class,'list'])->name('images.list');  
-    
-    
+
+    Route::get('/pdf/data-list', [PdfController::class, 'list'])->name('images.list');
+
+
     //reports
-    
+
     // SmsCredit
     Route::get('/sms-credit', [SmsCreditController::class, 'index'])
         ->name('sms.index');
@@ -118,35 +124,52 @@ Route::middleware(['auth'])->group(function () {
 
     // Route::get('/sms-credit/list', [SmsCreditController::class, 'list'])
     //     ->name('sms.list');
-        Route::get('/sms/list', [SmsCreditController::class, 'list'])->name('sms.list');
+    Route::get('/sms/list', [SmsCreditController::class, 'list'])->name('sms.list');
 
     Route::get('/sms-credit/report', [SmsCreditController::class, 'report'])
-    ->name('sms.report');
+        ->name('sms.report');
 
     Route::post('/sms-credit/report/data', [SmsCreditController::class, 'reportData'])
-    ->name('sms.report.data');
+        ->name('sms.report.data');
 
-   Route::get('/sms-credit/report/pdf', [SmsCreditController::class, 'reportPdf'])
-    ->name('sms.report.pdf');
+    Route::get('/sms-credit/report/pdf', [SmsCreditController::class, 'reportPdf'])
+        ->name('sms.report.pdf');
 
-Route::get('/sms-credit/report/excel', [SmsCreditController::class, 'reportExcel'])
-    ->name('sms.report.excel');
+    Route::get('/sms-credit/report/excel', [SmsCreditController::class, 'reportExcel'])
+        ->name('sms.report.excel');
 
-    Route::get('/application-access',
+    Route::get(
+        '/application-access',
         [ApplicationAccessController::class, 'index']
     )->name('application-access.index');
 
-    Route::get('/application-access/create',
+    Route::get(
+        '/application-access/create',
         [ApplicationAccessController::class, 'create']
     )->name('application-access.create');
 
-    Route::post('/application-access',
+    Route::post(
+        '/application-access',
         [ApplicationAccessController::class, 'store']
     )->name('application-access.store');
-    
-    Route::post('/application-access/{id}/regenerate-token',
-    [ApplicationAccessController::class, 'regenerateToken']
-)->name('application-access.regenerate-token');
+
+    Route::post(
+        '/application-access/{id}/regenerate-token',
+        [ApplicationAccessController::class, 'regenerateToken']
+    )->name('application-access.regenerate-token');
+
+//    deactive url 
+Route::patch(
+    '/image/{id}/deactivate',
+    [ImageController::class, 'deactivate']
+)->name('image.deactivate');
+
+Route::post(
+    '/image/update-expiry',
+    [ImageController::class, 'updateExpiry']
+)->name('image.update.expiry');
+
+
 });
 
 
@@ -158,4 +181,4 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
