@@ -75,13 +75,11 @@ public function list(Request $request)
             'pdf' => 'required|mimes:pdf|max:51200',
         ]);
 
-        // Remove old temporary pages
-        TempPage::where('session_id', session()->getId())->delete();
-
-        // Upload PDF
+        // Upload one PDF at a time. Existing pages for this session are preserved.
         $pdf = $request->file('pdf');
 
-        $fileName = time();
+        // Unique filename so multiple PDF uploads do not overwrite each other.
+        $fileName = time() . '_' . uniqid();
 
         $pdfPath = $pdf->storeAs(
             'pdfs',
@@ -107,10 +105,13 @@ public function list(Request $request)
 
         // Ghostscript Command
         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-    $gs = '"C:\\Program Files\\gs\\gs10.07.0\\bin\\gswin64c.exe"';
-} else {
-    $gs = '/usr/bin/gs';
-}
+
+        $gs = '"C:\\Program Files\\gs\\gs10.08.0\\bin\\gswin64c.exe"';
+
+    } else {
+
+        $gs = '/usr/bin/gs';
+    }
 
 $command = $gs .
     ' -dNOPAUSE' .
@@ -152,37 +153,31 @@ if ($status != 0) {
             'page*.png'
         );
 
+        // Continue from the last page already uploaded in this session.
+        $lastOrder = TempPage::where('session_id', session()->getId())
+            ->max('sort_order');
+
+        $sortOrder = $lastOrder ? ((int) $lastOrder + 1) : 1;
+
         $images = [];
 
-        foreach ($pages as $index => $page) {
+        foreach ($pages as $page) {
 
-            $relativePath =
-                'temp-pages/' .
-                basename($page);
+            $relativePath = 'temp-pages/' . basename($page);
 
-            // Save into temp_pages table
-           
+            $temp = TempPage::create([
+                'session_id' => session()->getId(),
+                'image_path' => $relativePath,
+                'sort_order' => $sortOrder,
+            ]);
 
-           $temp = TempPage::create([
+            $images[] = [
+                'id' => $temp->id,
+                'image' => asset('storage/' . $relativePath),
+                'sort_order' => $sortOrder,
+            ];
 
-    'session_id'=>session()->getId(),
-
-    'image_path'=>$relativePath,
-
-    'sort_order'=>$index+1
-
-]);
-
-$images[] = [
-
-    'id'=>$temp->id,
-
-    'image'=>asset('storage/'.$relativePath),
-
-    'sort_order'=>$temp->sort_order
-
-];
-
+            $sortOrder++;
         }
 
         return response()->json([
@@ -275,22 +270,24 @@ public function deletePage(Request $request)
 }
 public function reorder(Request $request)
 {
+    $request->validate([
+        'pages' => 'required|array',
+        'pages.*' => 'required|integer',
+    ]);
+
+    $sessionId = session()->getId();
+
     foreach ($request->pages as $index => $id) {
-
-        TempPage::where('id',$id)
-
+        TempPage::where('id', $id)
+            ->where('session_id', $sessionId)
             ->update([
-
-                'sort_order'=>$index+1
-
+                'sort_order' => $index + 1,
             ]);
-
     }
 
     return response()->json([
-
-        'success'=>true
-
+        'success' => true,
+        'message' => 'Page order updated successfully.',
     ]);
 }
 public function pages()
@@ -333,7 +330,9 @@ public function generate(Request $request)
         'district_id' => 'required|exists:districts,id',
         // 'image_name'  => 'required|string|max:255'
     ]);
-
+    $imageName = trim($request->image_name);
+    
+    
     $district = District::findOrFail($request->district_id);
 
     $date = now()->format('dMy');
@@ -346,14 +345,24 @@ public function generate(Request $request)
 
     $next = 1;
 
-if ($last) {
-    preg_match('/_(\d+)$/', $last->image_name, $m);
-    $next = isset($m[1]) ? ((int)$m[1] + 1) : 1;
-}
+    if ($last) {
+        preg_match('/_(\d+)$/', $last->image_name, $m);
+        $next = isset($m[1]) ? ((int)$m[1] + 1) : 1;
+    }
 
 $imageName = $prefix . '_' . $next;
 
+// Check duplicate image name (same district)
+// $exists = Image::where('district_id', $request->district_id)
+//     ->whereRaw('LOWER(image_name) = ?', [strtolower($imageName)])
+//     ->exists();
 
+// if ($exists) {
+//     return response()->json([
+//         'success' => false,
+//         'message' => 'Image name already exists. Please enter another image name.'
+//     ], 422);
+// }
         // temp file deleteding to db 
     $pages = TempPage::where('session_id', session()->getId())
         ->orderBy('sort_order')
@@ -368,66 +377,99 @@ $imageName = $prefix . '_' . $next;
 
     $manager = new ImageManager(new Driver());
 
-    $images = [];
+    // Only keep valid files. Images are loaded one-by-one below so multiple
+    // PDF uploads do not unnecessarily keep every source image in memory.
+    $validPaths = [];
 
     foreach ($pages as $page) {
-
         $path = storage_path('app/public/' . $page->image_path);
 
         if (File::exists($path)) {
-            $images[] = $manager->read($path)->orient();
+            $validPaths[] = $path;
         }
     }
 
-    if (count($images) == 0) {
+    if (empty($validPaths)) {
         return response()->json([
             'success' => false,
             'message' => 'Images not found.'
         ], 422);
     }
 
-    $spacing = 0;
-    $background = '#ffffff';
+    try {
+        $background = '#ffffff';
 
-    if ($request->mode == 'vertical') {
+        // First pass: determine the final canvas dimensions.
+        $targetWidth = 0;
+        $targetHeight = 0;
+        $totalHeight = 0;
+        $totalWidth = 0;
 
-        $targetWidth = max(array_map(fn($img) => $img->width(), $images));
+        foreach ($validPaths as $path) {
+            $img = $manager->read($path)->orient();
 
-        foreach ($images as $img) {
-            $img->scale(width: $targetWidth);
+            if ($request->mode === 'vertical') {
+                $targetWidth = max($targetWidth, $img->width());
+            } else {
+                $targetHeight = max($targetHeight, $img->height());
+            }
+
+            unset($img);
         }
 
-        $totalHeight = array_sum(array_map(fn($img) => $img->height(), $images));
+        // Second pass: calculate scaled dimensions.
+        if ($request->mode === 'vertical') {
+            foreach ($validPaths as $path) {
+                $img = $manager->read($path)->orient();
+                $newHeight = (int) round(
+                    $img->height() * ($targetWidth / $img->width())
+                );
+                $totalHeight += $newHeight;
+                unset($img);
+            }
 
-        $canvas = $manager->create($targetWidth, $totalHeight)
-                          ->fill($background);
+            $canvas = $manager->create($targetWidth, $totalHeight)
+                ->fill($background);
 
-        $y = 0;
+            $y = 0;
 
-        foreach ($images as $img) {
-            $canvas->place($img, 'top-left', 0, $y);
-            $y += $img->height();
+            foreach ($validPaths as $path) {
+                $img = $manager->read($path)->orient();
+                $img->scale(width: $targetWidth);
+                $canvas->place($img, 'top-left', 0, $y);
+                $y += $img->height();
+                unset($img);
+            }
+        } else {
+            foreach ($validPaths as $path) {
+                $img = $manager->read($path)->orient();
+                $newWidth = (int) round(
+                    $img->width() * ($targetHeight / $img->height())
+                );
+                $totalWidth += $newWidth;
+                unset($img);
+            }
+
+            $canvas = $manager->create($totalWidth, $targetHeight)
+                ->fill($background);
+
+            $x = 0;
+
+            foreach ($validPaths as $path) {
+                $img = $manager->read($path)->orient();
+                $img->scale(height: $targetHeight);
+                $canvas->place($img, 'top-left', $x, 0);
+                $x += $img->width();
+                unset($img);
+            }
         }
+    } catch (\Throwable $e) {
+        report($e);
 
-    } else {
-
-        $targetHeight = max(array_map(fn($img) => $img->height(), $images));
-
-        foreach ($images as $img) {
-            $img->scale(height: $targetHeight);
-        }
-
-        $totalWidth = array_sum(array_map(fn($img) => $img->width(), $images));
-
-        $canvas = $manager->create($totalWidth, $targetHeight)
-                          ->fill($background);
-
-        $x = 0;
-
-        foreach ($images as $img) {
-            $canvas->place($img, 'top-left', $x, 0);
-            $x += $img->width();
-        }
+        return response()->json([
+            'success' => false,
+            'message' => 'Image generation failed: ' . $e->getMessage(),
+        ], 500);
     }
 
     /*
@@ -460,7 +502,11 @@ $imageName = $prefix . '_' . $next;
     |--------------------------------------------------------------------------
     */
 
-    
+//     $imageName = preg_replace(
+//     '/[^A-Za-z0-9_-]/',
+//     '_',
+//     $imageName
+// );
 
     /*
     |--------------------------------------------------------------------------
@@ -548,11 +594,17 @@ $imageName = $prefix . '_' . $next;
     return response()->json([
     'success'      => true,
     'message'      => 'Image Generated Successfully',
+
     'district_id'  => $district->id,
+
     'image_name'   => $imageName,
+
     'file_path'    => 'images/' . $newFileName,
+
     'image_url'    => asset('storage/images/' . $newFileName),
+
     'short_code'   => $shortCode,
+
     'redirect_url' => url('/s/' . $shortCode),
 ]);
 }
@@ -573,114 +625,43 @@ $imageName = $prefix . '_' . $next;
 //     ]);
 // }
 
-// public function saveImage(Request $request)
-// {
-//     $request->validate([
-//         'district_id' => 'required|exists:districts,id',
-     
-//         'file_path'   => 'required|string',
-//         'short_code'  => 'required|string',
-//     ]);
-
-//     $district = District::findOrFail($request->district_id);
-
-// $date = now()->format('dMy');
-
-// $prefix = 'POTHYS_' . strtoupper($district->district_shortcode) . '_' . $date;
-
-// // Find last image saved today for this district
-// $lastImage = Image::where('district_id', $district->id)
-//     ->whereDate('created_at', today())
-//     ->orderByDesc('id')
-//     ->first();
-
-// $next = 1;
-
-// if ($lastImage) {
-
-//     if (preg_match('/_(\d+)\.jpeg$/i', $lastImage->image_name, $match)) {
-//         $next = (int)$match[1] + 1;
-//     }
-
-// }
-
-// $imageName = $prefix . '_' . $next ;
-
-//     // Clean image name
-//     // $imageName = $request->image_name;
-//     // $imageName = $request->image_name . '.jpeg';
-
-//     // Check duplicate image name in same district
-    
-
-//     $pages = TempPage::where('session_id', session()->getId())->get();
-
-//     foreach ($pages as $page) {
-
-//         $tempPath = storage_path('app/public/' . $page->image_path);
-
-//         if (File::exists($tempPath)) {
-//             File::delete($tempPath);
-//         }
-//     }
-
-// TempPage::where('session_id', session()->getId())->delete();
-//     $image = Image::create([
-//         'user_id'      => Auth::id() ?? 1,
-//         'district_id'  => $request->district_id,
-//         'image_name'   => $imageName,
-//         'file_path'    => $request->file_path,
-//         'short_code'   => $request->short_code,
-//         'click_count'  => 0,
-//     ]);
-
-//     return response()->json([
-//         'success' => true,
-//         'message' => 'Image saved successfully.',
-//         'data'    => $image,
-//     ]);
-// }
-
 public function saveImage(Request $request)
 {
     $request->validate([
         'district_id' => 'required|exists:districts,id',
+        // 'image_name'  => 'required|string|max:255',
         'file_path'   => 'required|string',
         'short_code'  => 'required|string',
     ]);
 
+    // Clean image name
+    // $imageName = trim($request->image_name);
+
     $district = District::findOrFail($request->district_id);
 
-    // // Example: POTHYS_CHN_02Jul26
-    // $date = now()->format('dMy');
-    // $prefix = 'POTHYS_' . strtoupper($district->district_shortcode) . '_' . $date;
+    // Example: POTHYS_CHN_02Jul26
+    $date = now()->format('dMy');
+    $prefix = 'POTHYS_' . strtoupper($district->district_shortcode) . '_' . $date;
 
     // Get last image for same district and same day
-    // $lastImage = Image::where('district_id', $district->id)
-    //     ->where('image_name', 'LIKE', $prefix . '_%.jpeg')
-    //     ->latest('id')
-    //     ->first();
+    $lastImage = Image::where('district_id', $district->id)
+        ->where('image_name', 'LIKE', $prefix . '_%.jpeg')
+        ->latest('id')
+        ->first();
 
-   
-// Base name
-//  $date = now()->format('dMy');
-$baseName = 'POTHYS_' . strtoupper($district->district_shortcode) . '_' . now()->format('dMy');
+    $next = 1;
 
-// Find next available number
-$suffix = 1;
+    if ($lastImage) {
 
-while (
-    Image::where('district_id', $district->id)
-        ->where('image_name', $baseName . '_' . $suffix . '.jpeg')
-        ->exists()
-) {
-    $suffix++;
-}
+        if (preg_match('/_(\d+)\.jpeg$/i', $lastImage->image_name, $match)) {
+            $next = (int) $match[1] + 1;
+        }
 
-// Final image name
-$imageName = $baseName . '_' . $suffix . '.jpeg';
+    }
 
-    // Delete temporary pages
+    // Final image name
+    $imageName = $prefix . '_' . $next . '.jpeg';
+
     $pages = TempPage::where('session_id', session()->getId())->get();
 
     foreach ($pages as $page) {
@@ -692,12 +673,10 @@ $imageName = $baseName . '_' . $suffix . '.jpeg';
         }
     }
 
-    TempPage::where('session_id', session()->getId())->delete();
-
-    // Save image
+TempPage::where('session_id', session()->getId())->delete();
     $image = Image::create([
         'user_id'      => Auth::id() ?? 1,
-        'district_id'  => $district->id,
+        'district_id'  => $request->district_id,
         'image_name'   => $imageName,
         'file_path'    => $request->file_path,
         'short_code'   => $request->short_code,
@@ -710,6 +689,7 @@ $imageName = $baseName . '_' . $suffix . '.jpeg';
         'data'    => $image,
     ]);
 }
+
 public function redirect($code)
 {
     // dd($code,'hi');
