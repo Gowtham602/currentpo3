@@ -378,12 +378,9 @@ public function redirect($code)
 
    
     if (
-        $image->expires_at &&
-        \Carbon\Carbon::parse($image->expires_at)
-            ->startOfDay()
-            ->lt(now()->startOfDay())
+    $image->expires_at &&
+    Carbon::parse($image->expires_at)->lessThanOrEqualTo(now())
     ) {
-
         return redirect('https://pothysmart.com/home_');
     }
 
@@ -794,8 +791,36 @@ public function update(Request $request, $short_code)
         $request->validate([
             'file_path'   => 'required',
             'district_id' => 'required|exists:districts,id',
-            'expires_at' => 'nullable|date|after_or_equal:today',
+            'expires_at_date' => 'nullable|date|after_or_equal:today',
+             'expires_at_time' => 'nullable|date_format:H:i',
         ]);
+
+$expiresAt = null;
+
+if ($request->filled('expires_at_date')) {
+    if (!$request->filled('expires_at_time')) {
+        return response()->json([
+            'message' => 'Please select an expiry time.',
+        ], 422);
+    }
+
+    $expiresAt = Carbon::createFromFormat(
+        'Y-m-d H:i',
+        $request->expires_at_date . ' ' . $request->expires_at_time,
+        'Asia/Kolkata'
+    );
+
+    if ($expiresAt->lessThanOrEqualTo(now())) {
+        return response()->json([
+            'message' => 'Expiry date and time must be in the future.',
+        ], 422);
+    }
+} elseif ($request->filled('expires_at_time')) {
+    return response()->json([
+        'message' => 'Please select an expiry date.',
+    ], 422);
+}
+
 
         $district  = District::findOrFail($request->district_id);
         $shortcode = strtoupper($district->district_shortcode);
@@ -833,7 +858,7 @@ public function update(Request $request, $short_code)
             'image_name'  => $cleanName,
             'file_path'   => 'images/' . $newFileName,
             'short_code'  => $shortCode,
-            'expires_at' => $request->expires_at,
+            'expires_at' => $expiresAt,
             'is_active' => true,
         ]);
 
@@ -1039,57 +1064,143 @@ public function urlShortener()
     );
 }
 
+// public function updateExpiry(Request $request)
+// {
+//     $request->validate([
+//         'image_id' => 'required|integer|exists:images,id',
+
+//         'expires_at_date' => 'nullable|date|after_or_equal:today',
+//         'expires_at_time' => 'nullable|date_format:H:i',
+//     ]);
+
+
+//     // Find image belonging to logged-in user
+
+//     $image = Image::where('id', $request->image_id)
+//         ->where('user_id', Auth::id())
+//         ->firstOrFail();
+
+
+
+//     $expiresAt = null;
+
+//     if ($request->filled('expires_at_date')) {
+//         if (!$request->filled('expires_at_time')) {
+//             return response()->json([
+//                 'message' => 'Please select an expiry time.',
+//             ], 422);
+//         }
+
+//         $expiresAt = Carbon::createFromFormat(
+//             'Y-m-d H:i',
+//             $request->expires_at_date . ' ' . $request->expires_at_time,
+//             'Asia/Kolkata'
+//         );
+
+//         if ($expiresAt->lessThanOrEqualTo(now())) {
+//             return response()->json([
+//                 'message' => 'Expiry date and time must be in the future.',
+//             ], 422);
+//         }
+//     } elseif ($request->filled('expires_at_time')) {
+//         return response()->json([
+//             'message' => 'Please select an expiry date.',
+//         ], 422);
+//     }
+
+
+//     // ==========================================
+//     // UPDATE EXPIRY DATE
+//     // ==========================================
+
+//     $image->expires_at =  $expiresAt;
+
+
+//     // ==========================================
+//     // ACTIVE
+//     // ==========================================
+
+//     // If user selects a future/today date
+//     // or removes expiry completely,
+//     // activate the URL.
+
+//     $image->is_active = true;
+
+
+//     $image->save();
+
+
+//     return response()->json([
+
+//         'success' => true,
+
+//         'message' => 'Expiry date updated successfully.',
+
+//         'expires_at' => $image->expires_at,
+
+//         'is_active' => $image->is_active,
+
+//     ]);
+// }
+
+
+
+
+
+
 public function updateExpiry(Request $request)
 {
     $request->validate([
-        'image_id' => 'required|integer|exists:images,id',
-
-        'expires_at' => [
-            'nullable',
-            'date',
-            'after_or_equal:today',
-        ],
+        'image_id'        => 'required|integer|exists:images,id',
+        'short_code'      => 'required|string',
+        'expires_at_date' => 'nullable|date',
+        'expires_at_time' => 'nullable|date_format:H:i',
     ]);
 
-
-    // Find image belonging to logged-in user
-
     $image = Image::where('id', $request->image_id)
+        ->where('short_code', $request->short_code)
         ->where('user_id', Auth::id())
         ->firstOrFail();
 
+    // Empty date means no expiry.
+    if (!$request->filled('expires_at_date')) {
+        $image->expires_at = null;
+        $image->save();
 
-    // ==========================================
-    // UPDATE EXPIRY DATE
-    // ==========================================
+        return response()->json([
+            'success' => true,
+            'message' => 'URL has no expiry.',
+            'expires_at' => null,
+        ]);
+    }
 
-    $image->expires_at = $request->expires_at;
+    // Use the selected time exactly.
+    // If no time was selected, use end of day.
+    $time = $request->filled('expires_at_time')
+        ? $request->expires_at_time
+        : '23:59:59';
 
+    $expiresAt = Carbon::createFromFormat(
+        'Y-m-d H:i:s',
+        $request->expires_at_date . ' ' . $time .
+        (strlen($time) === 5 ? ':00' : ''),
+        'Asia/Kolkata'
+    );
 
-    // ==========================================
-    // ACTIVE
-    // ==========================================
+    if ($expiresAt->lessThanOrEqualTo(now('Asia/Kolkata'))) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Expiry date and time must be in the future.',
+        ], 422);
+    }
 
-    // If user selects a future/today date
-    // or removes expiry completely,
-    // activate the URL.
-
-    $image->is_active = true;
-
-
+    $image->expires_at = $expiresAt;
     $image->save();
 
-
     return response()->json([
-
         'success' => true,
-
-        'message' => 'Expiry date updated successfully.',
-
-        'expires_at' => $image->expires_at,
-
-        'is_active' => $image->is_active,
-
+        'message' => 'Expiry updated successfully.',
+        'expires_at' => $expiresAt->format('Y-m-d H:i:s'),
     ]);
 }
 

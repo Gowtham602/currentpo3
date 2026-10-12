@@ -1,5 +1,5 @@
 
-text/x-generic navigation.blade.php ( HTML document, ASCII text )
+
     <header id="page-topbar">
     <div class="layout-width">
         <div class="navbar-header">

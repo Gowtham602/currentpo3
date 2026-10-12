@@ -23,7 +23,7 @@ class Image extends Model
     ];
 
     protected $casts = [
-    'expires_at' => 'date',
+    'expires_at' => 'datetime',
     'is_active' => 'boolean',
     ];
 
