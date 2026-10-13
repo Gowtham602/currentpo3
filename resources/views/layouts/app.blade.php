@@ -41,7 +41,255 @@
 
 		<!-- Custom Css -->
 		<link href="{{ asset('assets/css/custom.min.css') }}" rel="stylesheet" type="text/css" />
-		
+
+	<style>
+	
+/* ================================
+   OVERLAY
+================================ */
+.expiry-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    background: rgba(0, 0, 0, 0.35);
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    box-sizing: border-box;
+}
+
+/* ================================
+   SAME SIZE FOR CALENDAR & TIME
+================================ */
+.expiry-popup {
+    width: 340px;
+    max-width: 100%;
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 16px;
+    box-sizing: border-box;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Keep both views at the same width */
+#expiryDateView,
+#expiryTimeView {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+/* ================================
+   HEADER
+================================ */
+.expiry-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.expiry-header button {
+    flex-shrink: 0;
+    border: 0;
+    border-radius: 5px;
+    padding: 7px 12px;
+    background: #40538b;
+    color: #fff;
+    cursor: pointer;
+}
+
+.expiry-header button:hover {
+    background: #334575;
+}
+
+/* ================================
+   CALENDAR
+================================ */
+.expiry-weekdays,
+.expiry-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    width: 100%;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.expiry-weekdays {
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.expiry-day {
+    width: 100%;
+    min-width: 0;
+    aspect-ratio: 1 / 1;
+    border: 0;
+    border-radius: 50%;
+    background: #fff;
+    color: #222;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0;
+}
+
+.expiry-day:disabled {
+    color: #ccc;
+    cursor: not-allowed;
+}
+
+.expiry-day.selected,
+.expiry-day:hover:not(:disabled) {
+    background: #1686e8;
+    color: #fff;
+}
+
+/* ================================
+   TIME PICKER
+================================ */
+.expiry-hours {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 7px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.expiry-hours button {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 10px 2px;
+    border: 0;
+    border-radius: 7px;
+    background: #f0f2f5;
+    color: #222;
+    font-size: 13px;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.expiry-hours button:hover {
+    background: #e0e7f1;
+}
+
+.expiry-hours button.active {
+    background: #1686e8;
+    color: #fff;
+}
+
+/* AM / PM labels */
+.expiry-period-title {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    margin: 10px 0 8px;
+}
+
+/* Minutes dropdown */
+.expiry-minutes {
+    width: 100%;
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    background: #fff;
+    box-sizing: border-box;
+}
+
+/* Cancel and Confirm buttons */
+.expiry-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.expiry-actions button {
+    width: 100%;
+    min-height: 40px;
+    border: 0;
+    border-radius: 5px;
+    padding: 9px 8px;
+    color: #fff;
+    cursor: pointer;
+}
+
+.expiry-actions .cancel-btn {
+    background: #3674f5;
+}
+
+.expiry-actions .confirm-btn {
+    background: #40538b;
+}
+
+/* ================================
+   RESPONSIVE
+================================ */
+@media (max-width: 480px) {
+    .expiry-overlay {
+        padding: 10px;
+    }
+
+    .expiry-popup {
+        width: 340px;
+        max-width: 100%;
+        padding: 14px;
+        border-radius: 10px;
+    }
+
+    .expiry-header {
+        margin-bottom: 12px;
+    }
+
+    .expiry-weekdays {
+        font-size: 11px;
+    }
+
+    .expiry-day {
+        font-size: 12px;
+    }
+
+    .expiry-hours {
+        gap: 5px;
+    }
+
+    .expiry-hours button {
+        min-height: 40px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 350px) {
+    .expiry-popup {
+        padding: 10px;
+    }
+
+    .expiry-hours {
+        gap: 4px;
+    }
+
+    .expiry-hours button {
+        min-height: 36px;
+        font-size: 11px;
+    }
+}
+
+/* Short screens */
+@media (max-height: 500px) {
+    .expiry-popup {
+        max-height: calc(100dvh - 20px);
+    }
+}
+</style>
+	
     </head>
 
     <body>
@@ -95,6 +343,10 @@
 		<script src="{{ asset('assets/js/app.js') }}"></script>
 		<!-- sweet alert   -->
 		<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+	
+
+
 
 			
 		@stack('scripts')

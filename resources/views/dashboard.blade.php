@@ -70,27 +70,68 @@
                                                     @foreach($districts ?? [] as $district)
                                                         <option value="{{ $district->id }}"
                                                             data-shortcode="{{ strtoupper($district->district_shortcode) }}">
-                                                            {{ $district->district_name }}</option>
+                                                            {{ $district->district_name }}
+                                                        </option>
                                                     @endforeach
                                                 </select>
                                             </div>
-                                            <div class="col-lg-6 mt-3">
-                                                <label class="form-label">URL Expiry Date</label>
 
-                                                <input type="date" name="expires_at_date" id="expires_at"
-                                                    class="form-control" min="{{ now()->format('Y-m-d') }}" />
+
+ 
+
+
+
+
+                                            <div class="col-lg-6 mt-3">
+                                                <label class="form-label">URL Expiry Date &amp; Time</label>
+                                                <input type="text" name="expires_at" id="expires_at"
+                                                    class="form-control" placeholder="Select date and time"
+                                                    autocomplete="off" readonly>
                                             </div>
 
-                                            <div class="col-lg-6 mt-3">
-                                                <label class="form-label">URL Expiry Time</label>
+                                            <div id="expiryPicker" class="expiry-overlay">
+                                                <div class="expiry-popup">
 
-                                                <input type="time" name="expires_at_time" id="expires_at_time"
-                                                    class="form-control" />
+                                                    <div id="expiryDateView">
+                                                        <div class="expiry-header">
+                                                            <button type="button" id="prevMonth">‹</button>
+                                                            <strong id="monthTitle"></strong>
+                                                            <button type="button" id="nextMonth">›</button>
+                                                        </div>
+                                                        <div class="expiry-weekdays">
+                                                            <span>Sun</span><span>Mon</span><span>Tue</span>
+                                                            <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                                                        </div>
+                                                        <div id="calendarDays" class="expiry-calendar-grid"></div>
+                                                    </div>
 
-                                                <div class="form-text">
-                                                    Select the expiry time. The URL will expire at that time in IST.
+                                                    <div id="expiryTimeView" style="display:none">
+                                                        <div class="expiry-header">
+                                                            <strong id="expiryDateLabel"></strong>
+                                                            <button type="button" id="backToDate">Back</button>
+                                                        </div>
+
+                                                        <h6 class="text-center">AM</h6>
+                                                        <div id="expiryAm" class="expiry-hours"></div>
+
+                                                        <h6 class="text-center mt-3">PM</h6>
+                                                        <div id="expiryPm" class="expiry-hours"></div>
+
+                                                        <label class="form-label mt-3">Minutes</label>
+                                                        <select id="expiryMinutes" class="form-select"></select>
+
+                                                        <div class="d-flex gap-2 mt-3">
+                                                            <button type="button" id="cancelExpiry"
+                                                                class="btn btn-secondary flex-fill">Cancel</button>
+                                                            <button type="button" id="confirmExpiry"
+                                                                class="btn btn-primary flex-fill">Confirm</button>
+                                                        </div>
+                                                    </div>
+
                                                 </div>
                                             </div>
+
+
                                         </div>
                                     </div>
                                 </div>
@@ -165,7 +206,7 @@
                     <div class="col-lg-12">
                         <div class="card">
                             <div class="card-header">
-                                <h5 class="card-title mb-0">Uploaded Images</h5>
+                                <h5 class="card-title mb-0">Uploaded Images11</h5>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
@@ -189,7 +230,8 @@
                                                 <tr>
                                                     <td>{{ $loop->iteration }}</td>
                                                     <td>
-                                                        <a href="{{ asset('storage/' . $image->file_path) }}" target="_blank"
+                                                        <a href="{{ asset('storage/' . $image->file_path) }}"
+                                                            target="_blank"
                                                             class="text-dark fw-semibold text-decoration-none">
                                                             {{ $image->image_name }}
                                                         </a>
@@ -212,83 +254,81 @@
                                                     </td>
 
                                                     {{-- EXPIRY DATE AND TIME --}}
-{{-- EXPIRY DATE AND TIME --}}
-<td>
-    <div class="d-flex align-items-center gap-2">
-        <span id="expiry-text-{{ $image->id }}" class="text-muted small">
-            @if($image->expires_at)
-                {{ \Carbon\Carbon::parse($image->expires_at)->format('d M Y, h:i A') }}
-            @else
-                No Expiry
-            @endif
-        </span>
-
-        
-<button
-    type="button"
-    class="btn btn-sm btn-light border"
-    onclick="openExpiryModal(
-        {{ $image->id }},
-        @js($image->short_code),
-        @js($image->expires_at ? \Carbon\Carbon::parse($image->expires_at)->format('Y-m-d') : ''),
-        @js($image->expires_at ? \Carbon\Carbon::parse($image->expires_at)->format('H:i') : '')
-    )"
-    title="Edit Expiry Date and Time">
-    <i class="ri-edit-line"></i>
-</button>
-
-    </div>
-</td>
+                                                    {{-- EXPIRY DATE AND TIME --}}
+                                                    <td>
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <span id="expiry-text-{{ $image->id }}"
+                                                                class="text-muted small">
+                                                                @if($image->expires_at)
+                                                                    {{ \Carbon\Carbon::parse($image->expires_at)->format('d M Y, h:i A') }}
+                                                                @else
+                                                                    No Expiry
+                                                                @endif
+                                                            </span>
 
 
-{{-- EXPIRY STATUS --}}
-<td>
-    @if(!$image->is_active)
+                                                            <button type="button" class="btn btn-sm btn-light border"
+                                                                onclick="openExpiryModal(
+                                                        {{ $image->id }},
+                                                        @js($image->short_code),
+                                                        @js($image->expires_at ? \Carbon\Carbon::parse($image->expires_at)->format('Y-m-d') : ''),
+                                                        @js($image->expires_at ? \Carbon\Carbon::parse($image->expires_at)->format('H:i') : '')
+                                                    )" title="Edit Expiry Date and Time">
+                                                                <i class="ri-edit-line"></i>
+                                                            </button>
 
-        <span class="badge bg-danger">Inactive</span>
+                                                        </div>
+                                                    </td>
 
-    @elseif(
-        $image->expires_at &&
-        \Carbon\Carbon::parse($image->expires_at)->lessThanOrEqualTo(now())
-    )
 
-        <span class="badge bg-warning text-dark">Expired</span>
+                                                    {{-- EXPIRY STATUS --}}
+                                                    <td>
+                                                        @if(!$image->is_active)
 
-    @else
+                                                            <span class="badge bg-danger">Inactive</span>
 
-        <span class="badge bg-success">Active</span>
+                                                        @elseif(
+                                                                $image->expires_at &&
+                                                                \Carbon\Carbon::parse($image->expires_at)->lessThanOrEqualTo(now())
+                                                            )
 
-    @endif
-</td>
+                                                            <span class="badge bg-warning text-dark">Expired</span>
+
+                                                        @else
+
+                                                            <span class="badge bg-success">Active</span>
+
+                                                        @endif
+                                                    </td>
 
 
                                                     {{-- STATUS --}}
                                                     <!-- <td>
 
-                                                        @if(
-                                                                $image->expires_at &&
-                                                                \Carbon\Carbon::parse($image->expires_at)->startOfDay()->lt(today())
-                                                            )
+                                                                                                        @if(
+                                                                                                                $image->expires_at &&
+                                                                                                                \Carbon\Carbon::parse($image->expires_at)->startOfDay()->lt(today())
+                                                                                                            )
 
-                                                            <span class="badge bg-warning text-dark">
-                                                                Expired
-                                                            </span>
+                                                                                                            <span class="badge bg-warning text-dark">
+                                                                                                                Expired
+                                                                                                            </span>
 
-                                                        @elseif(!$image->is_active)
+                                                                                                        @elseif(!$image->is_active)
 
-                                                            <span class="badge bg-danger">
-                                                                Inactive
-                                                            </span>
+                                                                                                            <span class="badge bg-danger">
+                                                                                                                Inactive
+                                                                                                            </span>
 
-                                                        @else
+                                                                                                        @else
 
-                                                            <span class="badge bg-success">
-                                                                Active
-                                                            </span>
+                                                                                                            <span class="badge bg-success">
+                                                                                                                Active
+                                                                                                            </span>
 
-                                                        @endif
+                                                                                                        @endif
 
-                                                    </td> -->
+                                                                                                    </td> -->
 
                                                     <td class="text-muted small">
                                                         {{ $image->created_at->format('d M Y') }}<br>
@@ -395,78 +435,120 @@
     EXPIRY DATE MODAL
     ========================================== --}}
 
+    {{-- EXPIRY MODAL --}}
     <div class="modal fade" id="expiryModal" tabindex="-1" aria-labelledby="expiryModalLabel" aria-hidden="true">
 
         <div class="modal-dialog modal-dialog-centered">
-
             <div class="modal-content">
 
                 {{-- HEADER --}}
-
                 <div class="modal-header">
-
                     <h5 class="modal-title" id="expiryModalLabel">
                         <i class="ri-calendar-line me-2"></i>
-                        Update Expiry Date
+                        Update Expiry Date &amp; Time
                     </h5>
 
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-
                 {{-- BODY --}}
-
                 <div class="modal-body">
 
                     <input type="hidden" id="expiry_image_id">
-                    <!-- <input type="time" id="expiry_time_input" class="form-control"> -->
-
                     <input type="hidden" id="expiry_short_code">
 
+                    <div class="mb-3">
+                        <label for="expiry_date_input" class="form-label fw-semibold">
+                            Expiry Date &amp; Time
+                        </label>
 
-                    <<div class="mb-3">
-                        <label class="form-label fw-semibold">Expiry Date</label>
-
-                        <input type="date" id="expiry_date_input" class="form-control"
-                            min="{{ now()->format('Y-m-d') }}" />
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Expiry Time</label>
-
-                    <input type="time" id="expiry_time_input" class="form-control" />
-
-                    <div class="form-text">
-                        Set the exact expiry time in Indian Standard Time.
-                        Leave both fields empty for no expiry.
+                        <input type="text" id="expiry_date_input" class="form-control"
+                            placeholder="Select expiry date and time" autocomplete="off" readonly>
                     </div>
+
+                    <div class="form-text mb-3">
+                        Select a date, then choose the hour and minutes.
+                        Leave the field empty for no expiry.
+                    </div>
+
+                    {{-- ERROR MESSAGE --}}
+                    <div id="expiry_error" class="text-danger small" role="alert"></div>
+
                 </div>
 
-                <div id="expiry_error" class="text-danger small"></div>
+                {{-- FOOTER --}}
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Cancel
+                    </button>
 
-
-                <div id="expiry_error" class="text-danger small"></div>
+                    <button type="button" class="btn btn-primary" id="saveExpiryBtn">
+                        <i class="ri-save-line me-1"></i>
+                        Update Expiry
+                    </button>
+                </div>
 
             </div>
+        </div>
+    </div>
 
+    {{-- CUSTOM DATE & TIME PICKER --}}
+    <div id="expiryPicker" class="expiry-overlay">
+        <div class="expiry-popup">
 
-            {{-- FOOTER --}}
+            {{-- CALENDAR VIEW --}}
+            <div id="expiryDateView">
+                <div class="expiry-header">
+                    <button type="button" id="prevMonth">‹</button>
+                    <strong id="monthTitle"></strong>
+                    <button type="button" id="nextMonth">›</button>
+                </div>
 
-            <div class="modal-footer">
+                <div class="expiry-weekdays">
+                    <span>Sun</span>
+                    <span>Mon</span>
+                    <span>Tue</span>
+                    <span>Wed</span>
+                    <span>Thu</span>
+                    <span>Fri</span>
+                    <span>Sat</span>
+                </div>
 
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    Cancel
-                </button>
+                <div id="calendarDays" class="expiry-calendar-grid"></div>
+            </div>
 
-                <button type="button" class="btn btn-primary" id="saveExpiryBtn">
-                    <i class="ri-save-line me-1"></i>
-                    Save
-                </button>
+            {{-- TIME VIEW --}}
+            <div id="expiryTimeView" style="display:none">
+                <div class="expiry-header">
+                    <strong id="expiryDateLabel"></strong>
+                    <button type="button" id="backToDate">Back</button>
+                </div>
 
+                <h6 class="text-center">AM</h6>
+                <div id="expiryAm" class="expiry-hours"></div>
+
+                <h6 class="text-center mt-3">PM</h6>
+                <div id="expiryPm" class="expiry-hours"></div>
+
+                <label for="expiryMinutes" class="form-label mt-3">
+                    Minutes
+                </label>
+
+                <select id="expiryMinutes" class="form-select"></select>
+
+                <div class="d-flex gap-2 mt-3">
+                    <button type="button" id="cancelExpiry" class="btn btn-secondary flex-fill">
+                        Cancel
+                    </button>
+
+                    <button type="button" id="confirmExpiry" class="btn btn-primary flex-fill">
+                        Confirm
+                    </button>
+                </div>
             </div>
 
         </div>
+    </div>
 
     </div>
 
@@ -713,9 +795,19 @@
 
                 const filePath = document.getElementById('modalImage').dataset.filePath;
                 const districtId = document.getElementById('district_id').value;
-                const expiresAtDate = document.getElementById('expires_at').value;
+                const expiresAt = document.getElementById('expires_at').value;
 
-                const expiresAtTime = document.getElementById('expires_at_time').value;
+                let expiresAtDate = null;
+                let expiresAtTime = null;
+
+                if (expiresAt) {
+                    const parts = expiresAt.split(' ');
+
+                    expiresAtDate = parts[0];
+                    expiresAtTime = parts[1]
+                        ? parts[1].substring(0, 5)
+                        : null;
+                }
                 if (!districtId) { alert('Please select a district before saving.'); return; }
 
                 try {
@@ -771,14 +863,23 @@
             const button = this;
 
             const imageId = document.getElementById('expiry_image_id').value;
-
             const shortCode = document.getElementById('expiry_short_code').value;
 
-            const expiryDate = document.getElementById('expiry_date_input').value;
+            const expiryValue = document.getElementById('expiry_date_input').value;
 
-            const expiryTime = document.getElementById('expiry_time_input').value;
-console.log('Sending date:', expiryDate);
-console.log('Sending time:', expiryTime);
+            let expiryDate = null;
+            let expiryTime = null;
+
+            if (expiryValue) {
+                const parts = expiryValue.split(' ');
+
+                expiryDate = parts[0];
+                expiryTime = parts[1] ? parts[1].substring(0, 5) : null;
+            }
+
+            // const expiryTime = document.getElementById('expiry_time_input').value;
+            console.log('Sending date:', expiryDate);
+            console.log('Sending time:', expiryTime);
             const errorBox = document.getElementById('expiry_error');
 
 
@@ -923,24 +1024,29 @@ console.log('Sending time:', expiryTime);
             }
 
         });
-        function openExpiryModal(imageId, shortCode, expiryDate, expiryTime) {
 
+        window.openExpiryModal = function (
+            imageId,
+            shortCode,
+            expiryDate = '',
+            expiryTime = ''
+        ) {
             document.getElementById('expiry_image_id').value = imageId;
-
             document.getElementById('expiry_short_code').value = shortCode;
 
-            document.getElementById('expiry_date_input').value = expiryDate || '';
+            const input = document.getElementById('expiry_date_input');
 
-            document.getElementById('expiry_time_input').value = expiryTime || '';
+            input.value = expiryDate
+                ? `${expiryDate} ${expiryTime || '00:00'}:00`
+                : '';
 
             document.getElementById('expiry_error').textContent = '';
 
             const modalElement = document.getElementById('expiryModal');
 
-            const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+            bootstrap.Modal.getOrCreateInstance(modalElement).show();
+        };
 
-            modal.show();
-        }
     </script>
     <script>
         function initializeTables() {
@@ -963,6 +1069,260 @@ console.log('Sending time:', expiryTime);
         document.addEventListener("DOMContentLoaded", function () {
             initializeTables()
         });
+
+
+
     </script>
+
+
+
+
+
+  
+        <script>
+           
+document.addEventListener('DOMContentLoaded', function () {
+    const $ = id => document.getElementById(id);
+
+    const popup = $('expiryPicker');
+    const inputs = [$('expires_at'), $('expiry_date_input')].filter(Boolean);
+
+    if (!popup || inputs.length === 0 || popup.dataset.expiryReady) return;
+    popup.dataset.expiryReady = 'true';
+
+    const pad = n => String(n).padStart(2, '0');
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let month = new Date(today.getFullYear(), today.getMonth(), 1);
+    let selectedDate = null;
+    let selectedHour = 12;
+    let selectedPeriod = 'AM';
+    let selectedMinute = 0;
+    let activeInput = null;
+    let previousValue = '';
+
+    function dateString(date) {
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    }
+
+    function renderCalendar() {
+        $('monthTitle').textContent = month.toLocaleDateString('en-IN', {
+            month: 'long',
+            year: 'numeric'
+        });
+
+        const grid = $('calendarDays');
+        grid.replaceChildren();
+
+        const firstDay = new Date(
+            month.getFullYear(), month.getMonth(), 1
+        ).getDay();
+
+        const totalDays = new Date(
+            month.getFullYear(), month.getMonth() + 1, 0
+        ).getDate();
+
+        for (let i = 0; i < firstDay; i++) {
+            grid.appendChild(document.createElement('span'));
+        }
+
+        for (let day = 1; day <= totalDays; day++) {
+            const date = new Date(month.getFullYear(), month.getMonth(), day);
+            const button = document.createElement('button');
+
+            button.type = 'button';
+            button.className = 'expiry-day';
+            button.textContent = day;
+            button.disabled = date < today;
+
+            if (selectedDate && dateString(date) === dateString(selectedDate)) {
+                button.classList.add('selected');
+            }
+
+            button.addEventListener('click', function () {
+                selectedDate = date;
+
+                // Default time for a newly selected date.
+                selectedHour = 12;
+                selectedPeriod = 'AM';
+                selectedMinute = 0;
+                $('expiryMinutes').value = '0';
+
+                $('expiryDateLabel').textContent = date.toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric'
+                });
+
+                $('expiryDateView').style.display = 'none';
+                $('expiryTimeView').style.display = 'block';
+
+                updateHours();
+            });
+
+            grid.appendChild(button);
+        }
+    }
+
+    function createHours(containerId, period) {
+        const container = $(containerId);
+        container.replaceChildren();
+
+        [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].forEach(hour => {
+            const button = document.createElement('button');
+
+            button.type = 'button';
+            button.textContent = hour;
+            button.dataset.hour = hour;
+            button.dataset.period = period;
+
+            button.addEventListener('click', function () {
+                selectedHour = hour;
+                selectedPeriod = period;
+                updateHours();
+            });
+
+            container.appendChild(button);
+        });
+    }
+
+    function updateHours() {
+        popup.querySelectorAll('.expiry-hours button').forEach(button => {
+            button.classList.toggle(
+                'active',
+                Number(button.dataset.hour) === selectedHour &&
+                button.dataset.period === selectedPeriod
+            );
+        });
+    }
+
+    function openPicker(input) {
+        activeInput = input;
+        previousValue = input.value;
+
+        // Reset selection when opening the picker.
+        selectedDate = null;
+        selectedHour = 12;
+        selectedPeriod = 'AM';
+        selectedMinute = 0;
+
+        // Load existing date/time when editing a saved expiry.
+        const match = input.value.match(
+            /^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/
+        );
+
+        if (match) {
+            selectedDate = new Date(
+                Number(match[1]),
+                Number(match[2]) - 1,
+                Number(match[3])
+            );
+
+            const hour24 = Number(match[4]);
+            selectedHour = hour24 % 12 || 12;
+            selectedPeriod = hour24 >= 12 ? 'PM' : 'AM';
+            selectedMinute = Number(match[5]);
+        }
+
+        month = selectedDate
+            ? new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
+            : new Date(today.getFullYear(), today.getMonth(), 1);
+
+        $('expiryMinutes').value = String(selectedMinute);
+
+        if (selectedDate) {
+            $('expiryDateLabel').textContent = selectedDate.toLocaleDateString('en-IN', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+            });
+        }
+
+        $('expiryDateView').style.display = 'block';
+        $('expiryTimeView').style.display = 'none';
+
+        renderCalendar();
+        updateHours();
+
+        popup.style.display = 'flex';
+    }
+
+    createHours('expiryAm', 'AM');
+    createHours('expiryPm', 'PM');
+
+    const minuteSelect = $('expiryMinutes');
+    minuteSelect.replaceChildren();
+
+    for (let minute = 0; minute < 60; minute++) {
+        minuteSelect.add(new Option(pad(minute), String(minute)));
+    }
+
+    minuteSelect.addEventListener('change', function () {
+        selectedMinute = Number(this.value);
+    });
+
+    inputs.forEach(input => {
+        input.addEventListener('click', function () {
+            openPicker(input);
+        });
+    });
+
+    $('prevMonth').addEventListener('click', function () {
+        const previous = new Date(month.getFullYear(), month.getMonth() - 1, 1);
+
+        if (previous < new Date(today.getFullYear(), today.getMonth(), 1)) return;
+
+        month = previous;
+        renderCalendar();
+    });
+
+    $('nextMonth').addEventListener('click', function () {
+        month = new Date(month.getFullYear(), month.getMonth() + 1, 1);
+        renderCalendar();
+    });
+
+    $('backToDate').addEventListener('click', function () {
+        $('expiryTimeView').style.display = 'none';
+        $('expiryDateView').style.display = 'block';
+        renderCalendar();
+    });
+
+    $('cancelExpiry').addEventListener('click', function () {
+        if (activeInput) activeInput.value = previousValue;
+        popup.style.display = 'none';
+    });
+
+    $('confirmExpiry').addEventListener('click', function () {
+        if (!activeInput || !selectedDate) {
+            alert('Please select a date first.');
+            return;
+        }
+
+        let hour24 = selectedHour % 12;
+        if (selectedPeriod === 'PM') hour24 += 12;
+
+        activeInput.value =
+            `${dateString(selectedDate)} ${pad(hour24)}:${pad(selectedMinute)}:00`;
+
+        activeInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+        popup.style.display = 'none';
+    });
+
+    popup.addEventListener('click', function (event) {
+        if (event.target === popup) {
+            popup.style.display = 'none';
+        }
+    });
+});
+
+        </script>
+
+
+
+
+
 
 </x-app-layout>
