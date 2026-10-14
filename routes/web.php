@@ -6,6 +6,7 @@ use App\Http\Controllers\PdfController;
 use App\Http\Controllers\ShortUrlController;
 use App\Http\Controllers\SmsCreditController;
 use App\Http\Controllers\Admin\ApplicationAccessController;
+use App\Http\Controllers\Admin\SmsExcelImportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -168,6 +169,11 @@ Route::post(
     '/image/update-expiry',
     [ImageController::class, 'updateExpiry']
 )->name('image.update.expiry');
+
+//excel  greencard report 
+Route::get('/sms-import', [SmsExcelImportController::class,'index' ])->name('sms-import.index');
+
+Route::post('/sms-import', [SmsExcelImportController::class,'upload'])->name('sms-import.upload');
 
 
 });
