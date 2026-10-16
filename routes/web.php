@@ -30,6 +30,7 @@ Route::post('/process-images', [ImageController::class, 'process'])
 Route::get('/{code}', [ImageController::class, 'redirect'])
     ->where('code', '[A-Z]{2}[0-9]{1}[A-Z]{3}')
     ->name('short.url');
+    
 
 // merge and short url for 
 Route::post('/save-image', [ImageController::class, 'saveImage'])->name('save.image');
@@ -174,6 +175,8 @@ Route::post(
 Route::get('/sms-import', [SmsExcelImportController::class,'index' ])->name('sms-import.index');
 
 Route::post('/sms-import', [SmsExcelImportController::class,'upload'])->name('sms-import.upload');
+
+
 
 
 });

@@ -5,17 +5,174 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\SmsMonthlyRecord;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 use Carbon\Carbon;
 use Throwable;
 
 class SmsExcelImportController extends Controller
 {
-    public function index()
+   
+
+public function index(Request $request)
+{
+    $request->validate([
+        'month' => 'nullable|integer|min:1|max:12',
+        'year'  => 'nullable|integer|min:2020|max:2100',
+    ]);
+
+    $records = null;
+    $table = null;
+    $selectedMonth = $request->input('month');
+    $selectedYear = $request->input('year');
+    $tableExists = false;
+    $summary = collect();
+
+    if ($selectedMonth && $selectedYear) {
+        $table = strtolower(
+            Carbon::createFromDate(
+                (int) $selectedYear,
+                (int) $selectedMonth,
+                1
+            )->format('MY')
+        );
+
+        $tableExists = Schema::hasTable($table);
+
+        if ($tableExists) {
+            SmsMonthlyRecord::ensureMonthlyTable($table);
+
+            $records = DB::table($table)
+                ->orderBy('id', 'asc')
+                ->paginate(25)
+                ->withQueryString();
+
+            $summary = DB::table($table)
+                ->select('branch')
+                ->selectRaw("
+                    COUNT(CASE
+                        WHEN message_type = 'points_added'
+                        THEN 1
+                    END) AS points_added_count
+                ")
+                ->selectRaw("
+                    COALESCE(SUM(points_added), 0)
+                    AS points_added_total
+                ")
+                ->selectRaw("
+                    COUNT(CASE
+                        WHEN message_type = 'points_redeemed'
+                        THEN 1
+                    END) AS points_redeemed_count
+                ")
+                ->selectRaw("
+                    COALESCE(SUM(points_redeemed), 0)
+                    AS points_redeemed_total
+                ")
+                ->selectRaw("
+                    COUNT(CASE
+                        WHEN message_type = 'redeem_otp'
+                        THEN 1
+                    END) AS otp_count
+                ")
+                ->selectRaw("
+                    COUNT(CASE
+                        WHEN message_type = 'other'
+                        THEN 1
+                    END) AS other_count
+                ")
+                ->selectRaw('COUNT(*) AS total_sms')
+                ->groupBy('branch')
+                ->orderBy('branch', 'asc')
+                ->get();
+        }
+    }
+
+    return view('smsexcel.index', compact(
+        'records',
+        'table',
+        'selectedMonth',
+        'selectedYear',
+        'tableExists',
+        'summary'
+    ));
+}
+
+
+
+
+
+    /**
+     * Parse Excel Sent Time into a Carbon date.
+     */
+    private function parseSentTime($rawValue): ?Carbon
     {
-        return view('smsexcel.index');
+        if ($rawValue === null || trim((string) $rawValue) === '') {
+            return null;
+        }
+
+        // Excel date serial numbers are usually numeric values.
+        if (is_numeric($rawValue)) {
+            $serial = (float) $rawValue;
+
+            if ($serial >= 20000 && $serial <= 80000) {
+                try {
+                    return Carbon::instance(
+                        ExcelDate::excelToDateTimeObject($serial)
+                    );
+                } catch (Throwable $e) {
+                    return null;
+                }
+            }
+        }
+
+        
+        $value = trim((string) $rawValue);
+
+        $formats = [
+            'd-M-Y H:i:s',
+            'd-M-Y H:i',
+            'd-m-Y H:i:s',
+            'd-m-Y H:i',
+            'd/m/Y H:i:s',
+            'd/m/Y H:i',
+            'Y-m-d H:i:s',
+            'Y-m-d H:i',
+            'Y-m-d',
+            'd-M-Y',
+            'd-m-Y',
+            'd/m/Y',
+        ];
+
+        foreach ($formats as $format) {
+            try {
+                $date = Carbon::createFromFormat(
+                    '!' . $format,
+                    $value
+                );
+
+                $errors = Carbon::getLastErrors();
+
+                if (
+                    $date !== false &&
+                    (
+                        $errors === false ||
+                        (
+                            $errors['warning_count'] === 0 &&
+                            $errors['error_count'] === 0
+                        )
+                    )
+                ) {
+                    return $date;
+                }
+            } catch (Throwable $e) {
+                // Try the next supported format.
+            }
+        }
+
+        return null;
     }
 
     public function upload(Request $request)
@@ -31,6 +188,7 @@ class SmsExcelImportController extends Controller
 
         $processed = 0;
         $inserted = 0;
+        $updated = 0;
         $invalid = 0;
         $failed = 0;
         $errors = [];
@@ -53,9 +211,9 @@ class SmsExcelImportController extends Controller
                 $request->file('excel_file')->getRealPath()
             );
 
-            $sheet = $spreadsheet->getActiveSheet();
+            $sheet = $spreadsheet->getActiveSheet();      
 
-            // Read all rows. First row contains column headings.
+            // Read Excel rows. Row 1 contains the headings.
             $rows = $sheet->toArray(null, true, true, false);
 
             if (empty($rows)) {
@@ -77,6 +235,8 @@ class SmsExcelImportController extends Controller
 
             foreach ($expectedHeaders as $header) {
                 if (!in_array($header, $headers, true)) {
+                    $spreadsheet->disconnectWorksheets();
+
                     return back()->with(
                         'error',
                         'Missing Excel column: ' . $header
@@ -84,7 +244,7 @@ class SmsExcelImportController extends Controller
                 }
             }
 
-            // Map column headings to their indexes.
+            // Map each required heading to its Excel column index.
             $columnIndexes = [];
 
             foreach ($requiredHeaders as $header) {
@@ -94,6 +254,9 @@ class SmsExcelImportController extends Controller
                     true
                 );
             }
+
+            // Cache monthly table names already checked/created.
+            $preparedTables = [];
 
             foreach (array_slice($rows, 1) as $index => $row) {
                 $excelRowNumber = $index + 2;
@@ -118,131 +281,115 @@ class SmsExcelImportController extends Controller
                 ) {
                     $value = $row[$columnIndexes[$header]] ?? null;
 
-                    return $value === null
-                        ? null
-                        : trim((string) $value);
+                    if ($value === null) {
+                        return null;
+                    }
+
+                    $value = trim((string) $value);
+
+                    return $value === '' ? null : $value;
                 };
 
                 /*
-                 * IMPORTANT:
-                 * The date is taken ONLY from Sent Time.
-                 * Message is stored unchanged and is never parsed.
+                 * Parse Sent Time.
+                 * The original Excel value is used for parsing,
+                 * including Excel numeric date serials.
                  */
-                $sentTime = $getValue('Sent Time');
-                $date = null;
+                $rawSentTime = $row[
+                    $columnIndexes['Sent Time']
+                ] ?? null;
 
-                if (
-                    $sentTime !== null &&
-                    $sentTime !== ''
-                ) {
-                    try {
-                        /*
-                         * Handle Excel date/time serial numbers.
-                         * This conversion is used when the cell
-                         * contains a numeric Excel date value.
-                         */
-                        $sentTimeIndex = $columnIndexes['Sent Time'];
-                        $rawSentTime = $row[$sentTimeIndex] ?? null;
+                $parsedDate = $this->parseSentTime($rawSentTime);
 
-                        if (
-                            is_numeric($rawSentTime) &&
-                            is_int($rawSentTime) === false &&
-                            is_float($rawSentTime)
-                        ) {
-                            $parsedDate = Carbon::instance(
-                                ExcelDate::excelToDateTimeObject(
-                                    (float) $rawSentTime
-                                )
-                            );
-
-                            $date = $parsedDate->format('Y-m-d');
-                        } else {
-                           
-$formats = [
-    '!d-M-Y H:i:s', // 27-Sep-2026 09:07:42
-    '!d-M-Y H:i',
-    '!d-m-Y H:i:s',
-    '!d-m-Y H:i',
-    '!d/m/Y H:i:s',
-    '!d/m/Y H:i',
-    '!Y-m-d H:i:s',
-    '!Y-m-d H:i',
-    '!Y-m-d',
-    '!d-M-Y',
-    '!d-m-Y',
-    '!d/m/Y',
-];
-
-
-                            foreach ($formats as $format) {
-                                $parsedDate = Carbon::createFromFormat(
-                                    '!' . $format,
-                                    $sentTime
-                                );
-
-                                $dateErrors = Carbon::getLastErrors();
-
-                                if (
-                                    $parsedDate &&
-                                    (
-                                        $dateErrors === false ||
-                                        (
-                                            $dateErrors['warning_count'] === 0 &&
-                                            $dateErrors['error_count'] === 0
-                                        )
-                                    )
-                                ) {
-                                    $date = $parsedDate->format('Y-m-d');
-                                    break;
-                                }
-                            }
-                        }
-                    } catch (Throwable $e) {
-                        // The row will be reported as invalid below.
-                        $date = null;
-                    }
-                }
-
-                // No valid Sent Time means the row cannot be routed.
-                if (!$date) {
+                if (!$parsedDate) {
                     $invalid++;
+
                     $errors[] =
                         "Row {$excelRowNumber}: Invalid or missing Sent Time.";
+
                     continue;
                 }
 
+                $trackId = $getValue('TrackID');
+
+                if ($trackId === null) {
+                    $invalid++;
+
+                    $errors[] =
+                        "Row {$excelRowNumber}: Missing TrackID.";
+
+                    continue;
+                }
+
+                /*
+                 * Normalize Sent Time so the same timestamp
+                 * is stored consistently:
+                 * 27-Sep-2026 09:07:42
+                 */
+                $sentTime = $parsedDate->format('d-M-Y H:i:s');
+
+                $date = $parsedDate->format('Y-m-d');
+
                 // Example: 2026-09-27 => sep2026.
                 $table = SmsMonthlyRecord::monthlyTableName($date);
-try {
-    // First, create the table if it doesn't exist.
-    SmsMonthlyRecord::ensureMonthlyTable($table);
 
-    // Next, insert the Excel row.
-    SmsMonthlyRecord::insertMonthlyRow($table, [
-        'recipient'       => $getValue('Recipient'),
-        'status'          => $getValue('Status'),
-        'description'     => $getValue('Description'),
-        'credit_deducted' => $getValue('Credit Deducted'),
-        'sent_time'       => $getValue('Sent Time'),
-        'sender_id'       => $getValue('Sender ID'),
-        'track_id'        => $getValue('TrackID'),
-        'credit_type'     => $getValue('Credit Type'),
-        'circle'          => $getValue('Circle'),
-        'message'         => $getValue('Message'),
-        'message_date'    => $date,
-        'created_at'      => now(),
-        'updated_at'      => now(),
-    ]);
+                try {
+                    // Create each monthly table only once per upload.
+                    if (!isset($preparedTables[$table])) {
+                        SmsMonthlyRecord::ensureMonthlyTable($table);
 
+                        $preparedTables[$table] = true;
+                    }
+
+                    
+
+$message = $getValue('Message');
+
+$parsedMessage = SmsMonthlyRecord::parseMessage($message);
+
+$data = [
+    'recipient'       => $getValue('Recipient'),
+    'status'          => $getValue('Status'),
+    'description'     => $getValue('Description'),
+    'credit_deducted' => $getValue('Credit Deducted'),
+    'sent_time'       => $sentTime,
+    'sender_id'       => $getValue('Sender ID'),
+    'track_id'        => $trackId,
+    'credit_type'     => $getValue('Credit Type'),
+    'circle'          => $getValue('Circle'),
+    'message'         => $message,
+    'message_date'    => $date,
+
+    // Extracted message information.
+    'message_type'    => $parsedMessage['message_type'],
+    'card_number'     => $parsedMessage['card_number'],
+    'points_added'    => $parsedMessage['points_added'],
+    'points_redeemed' => $parsedMessage['points_redeemed'],
+    'total_points'    => $parsedMessage['total_points'],
+    'branch'          => $parsedMessage['branch'],
+    'sms_date'        => $parsedMessage['sms_date'],
+];
+
+$action = SmsMonthlyRecord::insertMonthlyRow(
+    $table,
+    $data
+);
+
+if ($action === 'updated') {
+    $updated++;
+} else {
     $inserted++;
-
-} catch (\Throwable $e) {
-    $failed++;
-
-    $errors[] = "Row {$excelRowNumber}: Database insert failed.";
-
-    report($e);
 }
+
+
+                } catch (Throwable $e) {
+                    $failed++;
+
+                    $errors[] =
+                        "Row {$excelRowNumber}: Database save failed.";
+
+                    report($e);
+                }
             }
 
             $spreadsheet->disconnectWorksheets();
@@ -251,6 +398,7 @@ try {
             return back()->with('import_result', [
                 'processed' => $processed,
                 'inserted'  => $inserted,
+                'updated'   => $updated,
                 'invalid'   => $invalid,
                 'failed'    => $failed,
                 'errors'    => $errors,
