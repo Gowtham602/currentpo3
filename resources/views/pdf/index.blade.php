@@ -380,17 +380,23 @@
     
         $("#preview").html("");
     
-        const baseUrl = "{{ asset('storage/app/public/temp-pages') }}";
+        
     
         $.each(res.images ?? res, function(index, item) {
     
-            const fileName = item.image.split('/').pop();
+            // const fileName = item.image.split('/').pop();
     
             $("#preview").append(`
                 <div class="col-md-3 mb-4">
                     <div class="card shadow">
     
-                        <img src="/storage/app/public/temp-pages/${fileName}" class="card-img-top">
+                          <img
+                        src="${item.image}"
+                        class="card-img-top"
+                        alt="Page ${item.sort_order}"
+                        style="width:100%; height:auto;"
+                        onerror="console.error('Image failed to load:', this.src)"
+                    >
     					
     
                         <div class="card-body text-center">

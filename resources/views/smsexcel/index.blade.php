@@ -245,114 +245,116 @@
         <h5 class="mb-0">View Monthly  Records</h5>
     </div>
 
-    <div class="card-body">
-        <form method="GET"
-              action="{{ route('sms-import.index') }}"
-              class="row g-3 align-items-end">
+    
+<div class="card-body">
+    <form method="GET"
+          action="{{ route('sms-import.index') }}"
+          class="row g-3 align-items-end">
 
-            <div class="col-md-4">
-                <label for="month" class="form-label">
-                    Select Month
-                </label>
+        
 
-                <select name="month" id="month"
-                        class="form-select" required>
-                    <option value="">Choose Month</option>
 
-                    @foreach (range(1, 12) as $m)
-                        <option value="{{ $m }}"
-                            @selected((string) $selectedMonth === (string) $m)>
-                            {{ \Carbon\Carbon::create()->month($m)->format('F') }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+<div class="col-md-6">
+    <label for="month_year" class="form-label">
+        Select Month & Year
+    </label>
 
-            <div class="col-md-4">
-                <label for="year" class="form-label">
-                    Select Year
-                </label>
+    <input
+        type="text"
+        name="month_year"
+        id="month_year"
+        class="form-control"
+        placeholder="Select month and year"
+        value="{{ request('month_year', now()->format('Y-m')) }}"
+        required
+        readonly
+    >
+</div>
 
-                <select name="year" id="year"
-                        class="form-select" required>
-                    <option value="">Choose Year</option>
 
-                    @for ($y = 2026; $y <= 2030; $y++)
-                        <option value="{{ $y }}"
-                            @selected((string) $selectedYear === (string) $y)>
-                            {{ $y }}
-                        </option>
-                    @endfor
-                </select>
-            </div>
 
-            <div class="col-md-4">
-                <button type="submit" class="btn btn-primary">
-                    Show Records
-                </button>
-            </div>
-        </form>
-    </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-primary">
+                Show Records
+            </button>
+        </div>
+
+    </form>
+</div>
+
 </div>
 
 {{-- Monthly SMS Summary by Branch --}}
-@if ($selectedMonth && $selectedYear && $tableExists)
-    <div class="card shadow-sm border-0 mt-4">
-        <div class="card-header bg-white py-3">
-            <h5 class="mb-0">
-                Monthly SMS Summary by Branch
-            </h5>
-            <small class="text-muted">
-                {{ \Carbon\Carbon::create()
-                    ->month((int) $selectedMonth)->format('F') }}
-                {{ $selectedYear }}
-            </small>
+
+@if ($selectedMonth && $selectedYear)
+
+    @if (!$tableExists)
+
+        <div class="alert alert-warning mt-4">
+            <strong>No monthly table found!</strong>
+            No SMS data table exists for
+            {{ \Carbon\Carbon::create()->month((int) $selectedMonth)->format('F') }}
+            {{ $selectedYear }}.
         </div>
 
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered table-striped
-                              table-hover align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Branch</th>
-                            <th>Total SMS</th>
-                            <th>Points Added Count</th>
-                            <th>Total Points Added</th>
-                            <th>Redeem Count</th>
-                            <th>Total Points Redeemed</th>
-                            <th>OTP Count</th>
-                            <th>Other SMS</th>
-                        </tr>
-                    </thead>
+    @else
 
-                    <tbody>
-                        @forelse ($summary as $item)
+        <div class="card shadow-sm border-0 mt-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0">Monthly SMS Summary by Branch</h5>
+
+                <small class="text-muted">
+                    {{ \Carbon\Carbon::create()
+                        ->month((int) $selectedMonth)->format('F') }}
+                    {{ $selectedYear }}
+                </small>
+            </div>
+
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped table-hover align-middle">
+                        <thead class="table-light">
                             <tr>
-                                <td>
-                                    {{ $item->branch ?: 'Unknown' }}
-                                </td>
-                                <td>{{ $item->total_sms }}</td>
-                                <td>{{ $item->points_added_count }}</td>
-                                <td>{{ $item->points_added_total }}</td>
-                                <td>{{ $item->points_redeemed_count }}</td>
-                                <td>{{ $item->points_redeemed_total }}</td>
-                                <td>{{ $item->otp_count }}</td>
-                                <td>{{ $item->other_count }}</td>
+                                <th>Branch</th>
+                                <th>Total SMS</th>
+                                <th>Points Added Count</th>
+                                <th>Total Points Added</th>
+                                <th>Redeem Count</th>
+                                <th>Total Points Redeemed</th>
+                                <th>OTP Count</th>
+                                <th>Other SMS</th>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="text-center">
-                                    No  records found.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                        </thead>
+
+                        <tbody>
+                            @forelse ($summary as $item)
+                                <tr>
+                                    <td>{{ $item->branch ?: 'Unknown' }}</td>
+                                    <td>{{ $item->total_sms }}</td>
+                                    <td>{{ $item->points_added_count }}</td>
+                                    <td>{{ $item->points_added_total }}</td>
+                                    <td>{{ $item->points_redeemed_count }}</td>
+                                    <td>{{ $item->points_redeemed_total }}</td>
+                                    <td>{{ $item->otp_count }}</td>
+                                    <td>{{ $item->other_count }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        No SMS records found for this month.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-    </div>
+
+    @endif
+
 @endif
+
 
 {{-- Monthly SMS Records Table --}}
 <!-- @if ($selectedMonth && $selectedYear)
@@ -509,4 +511,39 @@
         stroke-width: 1.5;
     }
 </style> -->
+<script>
+    
+
+document.addEventListener('DOMContentLoaded', function () {
+    const input = document.getElementById('month_year');
+
+    if (!input || typeof flatpickr === 'undefined' ||
+        typeof monthSelectPlugin === 'undefined') {
+        console.error('Flatpickr or monthSelect plugin is not loaded.');
+        return;
+    }
+
+    flatpickr(input, {
+        plugins: [
+            new monthSelectPlugin({
+                shorthand: false,
+                dateFormat: 'Y-m',
+                altFormat: 'F Y'
+            })
+        ],
+
+        altInput: true,
+        altFormat: 'F Y',
+        dateFormat: 'Y-m',
+
+        defaultDate: input.value || new Date(),
+
+        minDate: '2026-01',
+        maxDate: '2030-12',
+
+        allowInput: false
+    });
+});
+
+</script>
 </x-app-layout>

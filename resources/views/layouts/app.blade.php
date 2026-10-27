@@ -41,6 +41,15 @@
 
 		<!-- Custom Css -->
 		<link href="{{ asset('assets/css/custom.min.css') }}" rel="stylesheet" type="text/css" />
+        
+<!-- Flatpickr CSS -->
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<!-- Month Select Plugin CSS -->
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css">
+
 
 	<style>
 	
@@ -345,7 +354,10 @@
 		<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 	
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
+<!-- Month Select Plugin -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/index.js"></script>
 
 
 			

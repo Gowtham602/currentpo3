@@ -51,7 +51,10 @@ class SmsCreditController extends Controller
 
             foreach ($validated['rows'] as $row) {
 
-                SmsCredit::create($row);
+                // SmsCredit::create($row);
+                 SmsCredit::create(array_merge($row, [
+            'user_id' => auth()->id(),
+        ]));
 
             }
 
@@ -73,7 +76,10 @@ class SmsCreditController extends Controller
             abort(404);
         }
 
-        $query = SmsCredit::with('branch')->latest();
+        // $query = SmsCredit::with('branch')->latest();
+         $query = SmsCredit::with('branch')
+        ->where('user_id', auth()->id())
+        ->latest();
 
         return DataTables::of($query)
 
@@ -109,9 +115,10 @@ class SmsCreditController extends Controller
             ->make(true);
     }
 
-
+  
     public function report()
     {
+        
     $branches = Branch::where('status',1)
                 ->orderBy('branch_name')
                 ->get();
@@ -120,33 +127,86 @@ class SmsCreditController extends Controller
     }
 
 
-  public function reportData(Request $request)
+//   public function reportData(Request $request)
+// {
+//     $request->validate([
+//     'branch_id' => 'required|exists:branches,id',
+//     'from_date' => 'required|date',
+//     'to_date' => 'required|date|after_or_equal:from_date',
+// ], [
+//     'branch_id.required' => 'Please select a Branch.',
+//     'branch_id.exists' => 'Selected Branch is invalid.',
+
+//     'from_date.required' => 'Please select From Date.',
+
+//     'to_date.required' => 'Please select To Date.',
+//     'to_date.after_or_equal' => 'To Date must be greater than or equal to From Date.',
+// ]);
+
+//     $query = SmsCredit::with('branch')
+//      ->where('user_id', auth()->id())
+//         ->whereBetween('date', [
+//             $request->from_date,
+//             $request->to_date
+//         ]);
+
+//     if (!empty($request->branch_id)) {
+//         $query->where('branch_id', $request->branch_id);
+//     }
+
+//     $records = $query->orderBy('date')->get();
+
+//     $data = $records->map(function ($row) {
+//         return [
+//             'id' => $row->id,
+//             'branch' => [
+//                 'branch_name' => optional($row->branch)->branch_name,
+//             ],
+//             'date' => $row->date->format('d-m-Y'),
+//             'message' => $row->message,
+//             'submit_count' => $row->submit_count,
+//             'credit' => $row->credit,
+//         ];
+//     });
+
+//     return response()->json([
+//         'data'    => $data,
+//         'submit'  => $records->sum('submit_count'),
+//         'credit'  => $records->sum('credit'),
+//     ]);
+// }
+
+
+
+public function reportData(Request $request)
 {
-    $request->validate([
-    'branch_id' => 'required|exists:branches,id',
-    'from_date' => 'required|date',
-    'to_date' => 'required|date|after_or_equal:from_date',
-], [
-    'branch_id.required' => 'Please select a Branch.',
-    'branch_id.exists' => 'Selected Branch is invalid.',
-
-    'from_date.required' => 'Please select From Date.',
-
-    'to_date.required' => 'Please select To Date.',
-    'to_date.after_or_equal' => 'To Date must be greater than or equal to From Date.',
+    dd([
+    'logged_in_user_id' => auth()->id(),
+    'database_user_ids' => SmsCredit::distinct()
+        ->pluck('user_id'),
 ]);
+    $request->validate([
+        'branch_id' => 'required|exists:branches,id',
+        'from_date' => 'required|date',
+        'to_date' => 'required|date|after_or_equal:from_date',
+    ], [
+        'branch_id.required' => 'Please select a Branch.',
+        'branch_id.exists' => 'Selected Branch is invalid.',
+        'from_date.required' => 'Please select From Date.',
+        'to_date.required' => 'Please select To Date.',
+        'to_date.after_or_equal' =>
+            'To Date must be greater than or equal to From Date.',
+    ]);
 
-    $query = SmsCredit::with('branch')
+    $records = SmsCredit::with('branch')
+        ->where('user_id', auth()->id())
         ->whereBetween('date', [
             $request->from_date,
-            $request->to_date
-        ]);
-
-    if (!empty($request->branch_id)) {
-        $query->where('branch_id', $request->branch_id);
-    }
-
-    $records = $query->orderBy('date')->get();
+            $request->to_date,
+        ])
+        ->where('branch_id', $request->branch_id)
+        ->orderBy('date')
+        ->get();
 
     $data = $records->map(function ($row) {
         return [
@@ -154,7 +214,9 @@ class SmsCreditController extends Controller
             'branch' => [
                 'branch_name' => optional($row->branch)->branch_name,
             ],
-            'date' => $row->date->format('d-m-Y'),
+            'date' => $row->date
+                ? $row->date->format('d-m-Y')
+                : '-',
             'message' => $row->message,
             'submit_count' => $row->submit_count,
             'credit' => $row->credit,
@@ -162,22 +224,81 @@ class SmsCreditController extends Controller
     });
 
     return response()->json([
-        'data'    => $data,
-        'submit'  => $records->sum('submit_count'),
-        'credit'  => $records->sum('credit'),
+        'data' => $data,
+        'submit' => $records->sum('submit_count'),
+        'credit' => $records->sum('credit'),
     ]);
 }
 
+// public function reportPdf(Request $request)
+// {
+//     $query = SmsCredit::with('branch')
+//         ->whereBetween('date', [
+//             $request->from_date,
+//             $request->to_date
+//         ]);
+
+//     if ($request->filled('branch_id')) {
+//         $query->where('branch_id', $request->branch_id);
+//     }
+
+//     $records = $query->orderBy('date')->get();
+
+//     $totalSubmit = $records->sum('submit_count');
+//     $totalCredit = $records->sum('credit');
+
+//     return Pdf::loadView(
+//         'sms.pdf',
+//         compact(
+//             'records',
+//             'totalSubmit',
+//             'totalCredit'
+//         )
+//     )
+//     ->setPaper('A4', 'landscape')
+//     ->download('SMS_Credit_Report.pdf');
+// }
+
+
+// public function reportExcel(Request $request)
+// {
+//     $query = SmsCredit::with('branch')
+//         ->whereBetween('date', [
+//             $request->from_date,
+//             $request->to_date
+//         ]);
+
+//     if ($request->filled('branch_id')) {
+//         $query->where('branch_id', $request->branch_id);
+//     }
+
+//     $records = $query->orderBy('date')->get();
+
+//     return Excel::download(
+//         new SmsCreditExport($records),
+//         'SMS_Credit_Report.xlsx'
+//     );
+// }
+
+
+
 public function reportPdf(Request $request)
 {
+    $validated = $request->validate([
+        'from_date' => 'required|date',
+        'to_date' => 'required|date|after_or_equal:from_date',
+        'branch_id' => 'nullable|exists:branches,id',
+    ]);
+
     $query = SmsCredit::with('branch')
+        ->where('user_id', auth()->id())
         ->whereBetween('date', [
-            $request->from_date,
-            $request->to_date
+            $validated['from_date'],
+            $validated['to_date'],
         ]);
 
-    if ($request->filled('branch_id')) {
-        $query->where('branch_id', $request->branch_id);
+    if (!empty($validated['branch_id'])) {
+        $query->where('branch_id', $validated['branch_id']);
     }
 
     $records = $query->orderBy('date')->get();
@@ -187,27 +308,29 @@ public function reportPdf(Request $request)
 
     return Pdf::loadView(
         'sms.pdf',
-        compact(
-            'records',
-            'totalSubmit',
-            'totalCredit'
-        )
+        compact('records', 'totalSubmit', 'totalCredit')
     )
-    ->setPaper('A4', 'landscape')
-    ->download('SMS_Credit_Report.pdf');
+        ->setPaper('A4', 'landscape')
+        ->download('SMS_Credit_Report.pdf');
 }
-
 
 public function reportExcel(Request $request)
 {
+    $validated = $request->validate([
+        'from_date' => 'required|date',
+        'to_date' => 'required|date|after_or_equal:from_date',
+        'branch_id' => 'nullable|exists:branches,id',
+    ]);
+
     $query = SmsCredit::with('branch')
+        ->where('user_id', auth()->id())
         ->whereBetween('date', [
-            $request->from_date,
-            $request->to_date
+            $validated['from_date'],
+            $validated['to_date'],
         ]);
 
-    if ($request->filled('branch_id')) {
-        $query->where('branch_id', $request->branch_id);
+    if (!empty($validated['branch_id'])) {
+        $query->where('branch_id', $validated['branch_id']);
     }
 
     $records = $query->orderBy('date')->get();
@@ -217,4 +340,5 @@ public function reportExcel(Request $request)
         'SMS_Credit_Report.xlsx'
     );
 }
+
 }

@@ -12,6 +12,7 @@ class SmsCredit extends Model
     protected $table = 'sms_credits';
 
     protected $fillable = [
+        'user_id',
         'branch_id',
         'date',
         'message',

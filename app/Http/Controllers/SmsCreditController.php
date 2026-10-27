@@ -26,6 +26,7 @@ class SmsCreditController extends Controller
         return view('sms.index', compact('branches'));
     }
 
+    
     /**
      * Store Multiple SMS Credits
      */
@@ -58,7 +59,10 @@ class SmsCreditController extends Controller
                 //  verify auth()->user() is permitted to write to $row['branch_id']
                 // before creating (tenant/ownership scoping).
 
-                SmsCredit::create($row);
+                // SmsCredit::create($row);
+                 SmsCredit::create(array_merge($row, [
+            'user_id' => auth()->id(),
+  ]));
 
             }
 
@@ -81,7 +85,10 @@ class SmsCreditController extends Controller
 
         // scope this query to branches the current user is allowed to see,
         // e.g. ->whereIn('branch_id', auth()->user()->branchIds())
-        $query = SmsCredit::with('branch')->latest();
+        // $query = SmsCredit::with('branch')->latest();
+        $query = SmsCredit::with('branch')
+    ->where('user_id', auth()->id())
+    ->latest();
 
         return DataTables::of($query)
 
@@ -182,6 +189,7 @@ class SmsCreditController extends Controller
         $branch = Branch::where('status', 1)->findOrFail($request->branch_id);
 
         return SmsCredit::with('branch')
+         ->where('user_id', auth()->id())
             ->where('branch_id', $branch->id)
             ->whereBetween('date', [
                 $request->from_date,
@@ -196,6 +204,7 @@ class SmsCreditController extends Controller
             $this->reportValidationRules(),
             $this->reportValidationMessages()
         );
+        
 
         $records = $this->buildReportQuery($request)->get();
 
@@ -220,19 +229,48 @@ class SmsCreditController extends Controller
         ]);
     }
 
-    public function reportPdf(Request $request)
-    {
-        $request->validate(
-            $this->reportValidationRules(),
-            $this->reportValidationMessages()
-        );
+    // public function reportPdf(Request $request)
+    // {
+    //     $request->validate(
+    //         $this->reportValidationRules(),
+    //         $this->reportValidationMessages()
+    //     );
 
+    //     $records = $this->buildReportQuery($request)->get();
+    //     $branch = Branch::findOrFail($request->branch_id);
+    //     $totalSubmit = $records->sum('submit_count');
+    //     $totalCredit = $records->sum('credit');
+
+    //     return Pdf::loadView(
+    //         'sms.pdf',
+    //         compact(
+    //             'records',
+    //             'branch',
+    //             'totalSubmit',
+    //             'totalCredit'
+    //         )
+    //     )
+    //         ->setPaper('A4', 'landscape')
+    //         ->download('SMS_Credit_Report.pdf');
+    // }
+
+public function reportPdf(Request $request)
+{
+    $request->validate(
+        $this->reportValidationRules(),
+        $this->reportValidationMessages()
+    );
+
+    try {
         $records = $this->buildReportQuery($request)->get();
-        $branch = Branch::findOrFail($request->branch_id);
+
+        $branch = Branch::where('status', 1)
+            ->findOrFail($request->branch_id);
+
         $totalSubmit = $records->sum('submit_count');
         $totalCredit = $records->sum('credit');
 
-        return Pdf::loadView(
+        $pdf = Pdf::loadView(
             'sms.pdf',
             compact(
                 'records',
@@ -240,10 +278,22 @@ class SmsCreditController extends Controller
                 'totalSubmit',
                 'totalCredit'
             )
-        )
-            ->setPaper('A4', 'landscape')
-            ->download('SMS_Credit_Report.pdf');
+        )->setPaper('A4', 'landscape');
+
+        return $pdf->download('SMS_Credit_Report.pdf');
+
+    } catch (\Throwable $e) {
+        \Log::error('SMS Credit PDF export failed', [
+            'user_id' => auth()->id(),
+            'exception' => $e->getMessage(),
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'PDF generation failed. Please check the server log.',
+        ], 500);
     }
+}
 
 
     public function reportExcel(Request $request)

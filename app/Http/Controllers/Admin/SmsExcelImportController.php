@@ -14,80 +14,170 @@ use Throwable;
 
 class SmsExcelImportController extends Controller
 {
-   
+  
+
+// public function index(Request $request)
+
+// {
+//     $request->validate([
+//         'month' => 'nullable|integer|min:1|max:12',
+//         'year'  => 'nullable|integer|min:2020|max:2100',
+//     ]);
+
+//     $records = null;
+//     $table = null;
+//     $selectedMonth = $request->input('month');
+//     $selectedYear = $request->input('year');
+//     $tableExists = false;
+//     $summary = collect();
+
+
+//     if ($selectedMonth && $selectedYear) { 
+//         $table = strtolower(
+//             Carbon::createFromDate(
+//                 (int) $selectedYear,
+//                 (int) $selectedMonth,
+//                 1
+//             )->format('MY')
+//         );
+
+//         $tableExists = Schema::hasTable($table);
+
+//         if ($tableExists) {
+//             SmsMonthlyRecord::ensureMonthlyTable($table);
+
+//             $records = DB::table($table)
+//                 ->orderBy('id', 'asc')
+//                 ->paginate(25)
+//                 ->withQueryString();
+
+//             $summary = DB::table($table)
+//                 ->select('branch')
+//                 ->selectRaw("
+//                     COUNT(CASE
+//                         WHEN message_type = 'points_added'
+//                         THEN 1
+//                     END) AS points_added_count
+//                 ")
+//                 ->selectRaw("
+//                     COALESCE(SUM(points_added), 0)
+//                     AS points_added_total
+//                 ")
+//                 ->selectRaw("
+//                     COUNT(CASE
+//                         WHEN message_type = 'points_redeemed'
+//                         THEN 1
+//                     END) AS points_redeemed_count
+//                 ")
+//                 ->selectRaw("
+//                     COALESCE(SUM(points_redeemed), 0)
+//                     AS points_redeemed_total
+//                 ")
+//                 ->selectRaw("
+//                     COUNT(CASE
+//                         WHEN message_type = 'redeem_otp'
+//                         THEN 1
+//                     END) AS otp_count
+//                 ")
+//                 ->selectRaw("
+//                     COUNT(CASE
+//                         WHEN message_type = 'other'
+//                         THEN 1
+//                     END) AS other_count
+//                 ")
+//                 ->selectRaw('COUNT(*) AS total_sms')
+//                 ->groupBy('branch')
+//                 ->orderBy('branch', 'asc')
+//                 ->get();
+//         }
+//     }
+
+//     return view('smsexcel.index', compact(
+//         'records',
+//         'table',
+//         'selectedMonth',
+//         'selectedYear',
+//         'tableExists',
+//         'summary'
+//     ));
+// }
+
+
+  
 
 public function index(Request $request)
 {
+    // Default selected month: current month
+    $monthYear = $request->input(
+        'month_year',
+        now()->format('Y-m')
+    );
+
+    // Validate the selected month and year
     $request->validate([
-        'month' => 'nullable|integer|min:1|max:12',
-        'year'  => 'nullable|integer|min:2020|max:2100',
+        'month_year' => [
+            'nullable',
+            'date_format:Y-m',
+            'after_or_equal:2026-01',
+            'before_or_equal:2030-12',
+        ],
     ]);
 
-    $records = null;
-    $table = null;
-    $selectedMonth = $request->input('month');
-    $selectedYear = $request->input('year');
-    $tableExists = false;
+    // Convert 2026-07 into month = 7, year = 2026
+    $date = Carbon::createFromFormat('!Y-m', $monthYear);
+
+    $selectedMonth = $date->month;
+    $selectedYear = $date->year;
+
+    // Monthly table name, e.g. jul2026
+    $table = strtolower($date->format('MY'));
+
+    $tableExists = Schema::hasTable($table);
+
+    $records = collect();
     $summary = collect();
 
-    if ($selectedMonth && $selectedYear) {
-        $table = strtolower(
-            Carbon::createFromDate(
-                (int) $selectedYear,
-                (int) $selectedMonth,
-                1
-            )->format('MY')
-        );
+    if ($tableExists) {
 
-        $tableExists = Schema::hasTable($table);
+        // Fetch records for the selected month
+        $records = DB::table($table)
+            ->orderBy('id', 'asc')
+            ->paginate(25)
+            ->withQueryString();
 
-        if ($tableExists) {
-            SmsMonthlyRecord::ensureMonthlyTable($table);
-
-            $records = DB::table($table)
-                ->orderBy('id', 'asc')
-                ->paginate(25)
-                ->withQueryString();
-
-            $summary = DB::table($table)
-                ->select('branch')
-                ->selectRaw("
-                    COUNT(CASE
-                        WHEN message_type = 'points_added'
-                        THEN 1
-                    END) AS points_added_count
+        // Fetch branch-wise summary
+        $summary = DB::table($table)
+            ->select(
+                'branch',
+                DB::raw('COUNT(*) as total_sms'),
+                DB::raw("
+                    SUM(CASE WHEN message_type = 'points_added'
+                    THEN 1 ELSE 0 END) as points_added_count
+                "),
+                DB::raw("
+                    SUM(CASE WHEN message_type = 'points_added'
+                    THEN points_added ELSE 0 END) as points_added_total
+                "),
+                DB::raw("
+                    SUM(CASE WHEN message_type = 'points_redeemed'
+                    THEN 1 ELSE 0 END) as points_redeemed_count
+                "),
+                DB::raw("
+                    SUM(CASE WHEN message_type = 'points_redeemed'
+                    THEN points_redeemed ELSE 0 END) as points_redeemed_total
+                "),
+                DB::raw("
+                    SUM(CASE WHEN message_type = 'redeem_otp'
+                    THEN 1 ELSE 0 END) as otp_count
+                "),
+                DB::raw("
+                    SUM(CASE WHEN message_type = 'other'
+                    THEN 1 ELSE 0 END) as other_count
                 ")
-                ->selectRaw("
-                    COALESCE(SUM(points_added), 0)
-                    AS points_added_total
-                ")
-                ->selectRaw("
-                    COUNT(CASE
-                        WHEN message_type = 'points_redeemed'
-                        THEN 1
-                    END) AS points_redeemed_count
-                ")
-                ->selectRaw("
-                    COALESCE(SUM(points_redeemed), 0)
-                    AS points_redeemed_total
-                ")
-                ->selectRaw("
-                    COUNT(CASE
-                        WHEN message_type = 'redeem_otp'
-                        THEN 1
-                    END) AS otp_count
-                ")
-                ->selectRaw("
-                    COUNT(CASE
-                        WHEN message_type = 'other'
-                        THEN 1
-                    END) AS other_count
-                ")
-                ->selectRaw('COUNT(*) AS total_sms')
-                ->groupBy('branch')
-                ->orderBy('branch', 'asc')
-                ->get();
-        }
+            )
+            ->groupBy('branch')
+            ->orderBy('branch')
+            ->get();
     }
 
     return view('smsexcel.index', compact(
@@ -99,10 +189,6 @@ public function index(Request $request)
         'summary'
     ));
 }
-
-
-
-
 
     /**
      * Parse Excel Sent Time into a Carbon date.

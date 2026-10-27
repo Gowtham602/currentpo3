@@ -24,6 +24,7 @@ class RoleMiddleware
             abort(403, 'Unauthorized Access');
         }
 
+        
         return $next($request);
     }
 }
