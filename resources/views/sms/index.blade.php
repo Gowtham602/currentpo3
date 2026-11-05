@@ -1,863 +1,380 @@
-    <x-app-layout>
 
-        <x-slot name="title">
-            SMS Credit
-        </x-slot>
+<x-app-layout>
 
-        <div class="main-content">
-            <div class="page-content">
-                <div class="container-fluid">
+    <x-slot name="title">
+        SMS Credit
+    </x-slot>
 
-                    <!-- Page Heading -->
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-                                <h4 class="mb-sm-0">
-                                    Reports Management
-                                </h4>
+    <div class="container-fluid py-4">
 
-                                <div class="page-title-right">
-    <ol class="breadcrumb m-0">
-        <!-- <li class="breadcrumb-item">
-            <a href="{{ route('dashboard') }}">
-                Dashboard
-            </a>
-        </li>
+        <div class="row justify-content-center">
 
-        <li class="breadcrumb-item">
-            <a href="{{ route('sms.index') }}">
-                SMS Credit
-            </a>
-        </li> -->
+            <div class="col-lg-8 col-md-10">
 
-        <li class="breadcrumb-item active">
-          
-            <a href="{{ route('sms.report') }}">
-                 Report
-            </a>
+                <div class="card border-0 shadow-sm">
 
-        </li>
-    </ol>
-</div>
-                            </div>
-                        </div>
+                    <div class="card-header bg-white py-3">
+                        <h5 class="mb-1 fw-bold">SMS Excel Import</h5>
+
+                        <small class="text-muted">
+                            Upload SMS Excel records into monthly database tables.
+                        </small>
                     </div>
 
-                    <!-- =========================
-                            ENTRY FORM
-                    ========================== -->
+                    <div class="card-body p-4">
 
-                    <div class="row">
+                        <form id="smsImportForm"
+                              enctype="multipart/form-data">
 
-                        <div class="col-lg-12">
+                            @csrf
 
-                            <div class="card">
+                            <div class="mb-4">
 
-                                <div class="card-header">
+                                <label for="excel_file"
+                                       class="form-label fw-semibold">
+                                    Select Excel File
+                                </label>
 
-                                    <div class="d-flex justify-content-between align-items-center">
+                                <input type="file"
+                                       name="excel_file"
+                                       id="excel_file"
+                                       class="form-control"
+                                       accept=".xlsx,.xls"
+                                       required>
 
-                                        <h4 class="card-title mb-0">
-                                            SMS Credit Entry 1
-                                        </h4>
+                                <small class="text-muted">
+                                    Supported formats: XLSX, XLS
+                                </small>
 
-                                        <button
-                                            type="button"
-                                            id="addRow"
-                                            class="btn btn-success btn-sm">
+                            </div>
 
-                                            <i class="ri-add-line"></i>
+                            <button type="submit"
+                                    id="uploadBtn"
+                                    class="btn btn-primary w-100">
 
-                                            Add Row
+                                <span id="uploadBtnText">
+                                    <i class="fas fa-upload me-2"></i>
+                                    Upload Excel
+                                </span>
 
-                                        </button>
+                                <span id="uploadSpinner"
+                                      class="spinner-border spinner-border-sm d-none"
+                                      role="status">
+                                </span>
 
-                                    </div>
+                            </button>
 
-                                </div>
+                        </form>
 
-                                <div class="card-body">
 
-                                    <form id="smsForm">
+                        <!-- Progress Section -->
 
-                                        @csrf
+                        <div id="progressArea" class="mt-4 d-none">
 
-                                        <div class="table-responsive">
+                            <div class="d-flex justify-content-between mb-2">
 
-                                            <table
-                                                class="table table-bordered align-middle"
-                                                id="entryTable">
+                                <span id="progressText"
+                                      class="fw-semibold">
+                                    Uploading Excel...
+                                </span>
 
-                                                <thead class="table-light">
+                                <strong id="progressPercent">
+                                    0%
+                                </strong>
 
-                                                    <tr>
+                            </div>
 
-                                                        <th width="20%">
-                                                            Branch
-                                                        </th>
+                            <div class="progress"
+                                 style="height: 22px;">
 
-                                                        <th width="15%">
-                                                            Date
-                                                        </th>
+                                <div id="progressBar"
+                                     class="progress-bar progress-bar-striped progress-bar-animated"
+                                     role="progressbar"
+                                     style="width: 0%;">
 
-                                                        <th>
-                                                            Message
-                                                        </th>
-
-                                                        <th width="10%">
-                                                            Submit Count
-                                                        </th>
-
-                                                        <th width="10%">
-                                                            Credit
-                                                        </th>
-
-                                                        <th width="8%">
-                                                            Action
-                                                        </th>
-
-                                                    </tr>
-
-                                                </thead>
-
-                                                <tbody>
-
-                                                    <tr>
-
-                                                        <!-- Branch -->
-
-                                                        <td>
-
-                                                            <select
-                                                                name="rows[0][branch_id]"
-                                                                class="form-select"
-                                                                required>
-
-                                                                <option value="">
-                                                                    Select Branch
-                                                                </option>
-
-                                                                @foreach($branches as $branch)
-
-                                                                    <option value="{{ $branch->id }}">
-
-                                                                        {{ $branch->branch_name }}
-
-                                                                    </option>
-
-                                                                @endforeach
-
-                                                            </select>
-
-                                                        </td>
-
-                                                        <!-- Date -->
-
-                                                        <td>
-
-                                                            <input
-                                                                type="date"
-                                                                name="rows[0][date]"
-                                                                class="form-control"
-                                                                value="{{ date('Y-m-d') }}"
-                                                                required>
-
-                                                        </td>
-
-                                                        <!-- Message -->
-
-                                                        <td>
-
-                                                            <textarea
-                                                                name="rows[0][message]"
-                                                                rows="2"
-                                                                class="form-control"
-                                                                placeholder="Enter SMS Message"
-                                                                required></textarea>
-
-                                                        </td>
-
-                                                        <!-- Submit Count -->
-
-                                                        <td>
-
-                                                            <input
-                                                                type="number"
-                                                                name="rows[0][submit_count]"
-                                                                class="form-control"
-                                                                min="0"
-                                                                placeholder="0"
-                                                                required>
-
-                                                        </td>
-
-                                                        <!-- Credit -->
-
-                                                        <td>
-
-                                                            <input
-                                                                type="number"
-                                                                name="rows[0][credit]"
-                                                                class="form-control"
-                                                                min="0"
-                                                                placeholder="0"
-                                                                required>
-
-                                                        </td>
-
-                                                        <!-- Remove -->
-
-                                                        <td class="text-center">
-
-                                                            <button
-                                                                type="button"
-                                                                class="btn btn-danger btn-sm removeRow">
-
-                                                                <i class="ri-delete-bin-line"></i>
-
-                                                            </button>
-
-                                                        </td>
-
-                                                    </tr>
-
-                                                </tbody>
-
-                                            </table>
-
-                                        </div>
-
-                                        <div class="text-end mt-3">
-
-                                            <button
-                                                type="reset"
-                                                class="btn btn-secondary">
-
-                                                <i class="ri-refresh-line"></i>
-
-                                                Reset
-
-                                            </button>
-
-                                            <button
-                                                type="submit"
-                                                class="btn btn-primary">
-
-                                                <i class="ri-save-line"></i>
-
-                                                Save SMS Credit
-
-                                            </button>
-
-                                        </div>
-
-                                    </form>
+                                    0%
 
                                 </div>
 
                             </div>
 
+                            <div id="progressMessage"
+                                 class="text-muted small mt-2">
+
+                                Please wait while your file is uploading.
+
+                            </div>
+
                         </div>
+
+
+                        <!-- Import Results -->
+
+                        <div id="resultArea" class="mt-4"></div>
 
                     </div>
-
-                    <!-- =========================
-                            DATATABLE
-                    ========================== -->
-    
-                    <div class="row mt-4">
-
-                        <div class="col-lg-12">
-
-                            <div class="card">
-
-                                <div class="card-header">
-
-                                    <h4 class="card-title mb-0">
-
-                                        SMS Credit List
-
-                                    </h4>
-
-                                </div>
-
-                                <div class="card-body">
-
-                                    <div class="table-responsive">
-
-                                        <table
-                                            id="smsTable"
-                                            class="table table-bordered table-striped align-middle w-100">
-
-                                            <thead class="table-light">
-
-                                                <tr>
-
-                                                    <th width="5%">
-                                                        #
-                                                    </th>
-
-                                                    <th>
-                                                        Branch
-                                                    </th>
-
-                                                    <th width="12%">
-                                                        Date
-                                                    </th>
-
-                                                    <th>
-                                                        Message
-                                                    </th>
-
-                                                    <th width="10%">
-                                                        Submit
-                                                    </th>
-
-                                                    <th width="10%">
-                                                        Credit
-                                                    </th>
-
-                                                    <!-- <th width="10%">
-                                                        Action
-                                                    </th> -->
-
-                                                </tr>
-
-                                            </thead>
-
-                                            <tbody>
-
-                                            </tbody>
-
-                                        </table>
-
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    </div> 
 
                 </div>
-            </div>
-        </div>
-    <!-- ==========================================
-            Validation Alert
-    =========================================== -->
-
-    <div id="validationErrors" class="alert alert-danger d-none mt-3">
-        <ul class="mb-0" id="errorList"></ul>
-    </div>
-
-
-    <!-- ==========================================
-            EDIT SMS CREDIT MODAL
-    =========================================== -->
-
-    <div class="modal fade"
-        id="editModal"
-        tabindex="-1"
-        aria-labelledby="editModalLabel"
-        aria-hidden="true">
-
-        <div class="modal-dialog modal-lg">
-
-            <div class="modal-content">
-
-                <!-- Modal Header -->
-
-                <div class="modal-header bg-primary text-white">
-
-                    <h5 class="modal-title" id="editModalLabel">
-
-                        <i class="ri-edit-line"></i>
-
-                        Edit SMS Credit
-
-                    </h5>
-
-                    <button type="button"
-                            class="btn-close btn-close-white"
-                            data-bs-dismiss="modal">
-                    </button>
-
-                </div>
-
-                <!-- Form -->
-
-                <form id="editForm">
-
-                    @csrf
-
-                    <input
-                        type="hidden"
-                        id="edit_id"
-                        name="id">
-
-                    <div class="modal-body">
-
-                        <div class="row">
-
-                            <!-- Branch -->
-
-                            <div class="col-md-6 mb-3">
-
-                                <label class="form-label">
-
-                                    Branch
-
-                                    <span class="text-danger">*</span>
-
-                                </label>
-
-                                <select
-                                    class="form-select"
-                                    id="edit_branch_id"
-                                    name="branch_id"
-                                    required>
-
-                                    <option value="">
-
-                                        Select Branch
-
-                                    </option>
-
-                                    @foreach($branches as $branch)
-
-                                        <option value="{{ $branch->id }}">
-
-                                            {{ $branch->branch_name }}
-
-                                        </option>
-
-                                    @endforeach
-
-                                </select>
-
-                            </div>
-
-                            <!-- Date -->
-
-                            <div class="col-md-6 mb-3">
-
-                                <label class="form-label">
-
-                                    Date
-
-                                    <span class="text-danger">*</span>
-
-                                </label>
-
-                                <input
-                                    type="date"
-                                    class="form-control"
-                                    id="edit_date"
-                                    name="date"
-                                    required>
-
-                            </div>
-
-                        </div>
-
-                        <div class="row">
-
-                            <!-- Message -->
-
-                            <div class="col-md-12 mb-3">
-
-                                <label class="form-label">
-
-                                    Message
-
-                                    <span class="text-danger">*</span>
-
-                                </label>
-
-                                <textarea
-                                    class="form-control"
-                                    id="edit_message"
-                                    name="message"
-                                    rows="4"
-                                    required></textarea>
-
-                            </div>
-
-                        </div>
-
-                        <div class="row">
-
-                            <!-- Submit Count -->
-
-                            <div class="col-md-6 mb-3">
-
-                                <label class="form-label">
-
-                                    Submit Count
-
-                                    <span class="text-danger">*</span>
-
-                                </label>
-
-                                <input
-                                    type="number"
-                                    min="0"
-                                    class="form-control"
-                                    id="edit_submit_count"
-                                    name="submit_count"
-                                    required>
-
-                            </div>
-
-                            <!-- Credit -->
-
-                            <div class="col-md-6 mb-3">
-
-                                <label class="form-label">
-
-                                    Credit
-
-                                    <span class="text-danger">*</span>
-
-                                </label>
-
-                                <input
-                                    type="number"
-                                    min="0"
-                                    class="form-control"
-                                    id="edit_credit"
-                                    name="credit"
-                                    required>
-
-                            </div>
-
-                        </div>
-
-                        <!-- Validation -->
-
-                        <div id="editValidationErrors"
-                            class="alert alert-danger d-none">
-
-                            <ul class="mb-0"
-                                id="editErrorList">
-                            </ul>
-
-                        </div>
-
-                    </div>
-
-                    <!-- Footer -->
-
-                    <div class="modal-footer">
-
-                        <button
-                            type="button"
-                            class="btn btn-secondary"
-                            data-bs-dismiss="modal">
-
-                            <i class="ri-close-line"></i>
-
-                            Close
-
-                        </button>
-
-                        <button
-                            type="submit"
-                            id="updateBtn"
-                            class="btn btn-primary">
-
-                            <i class="ri-save-line"></i>
-
-                            Update SMS Credit
-
-                        </button>
-
-                    </div>
-
-                </form>
 
             </div>
 
         </div>
 
     </div>
-    @push('scripts')
+
+
+    <style>
+
+        #progressArea .progress {
+            border-radius: 6px;
+            background: #e9ecef;
+        }
+
+        #progressBar {
+            transition: width .3s ease;
+        }
+
+        .card {
+            border-radius: 12px;
+        }
+
+    </style>
+
 
     <script>
-    $(document).ready(function () {
 
-        let rowIndex = 1;
+        document.addEventListener('DOMContentLoaded', function () {
 
-        /*=========================================
-            Dynamic Row Template
-        =========================================*/
-        function createRow(index) {
+            const form = document.getElementById('smsImportForm');
 
-            return `
-            <tr>
+            if (!form) return;
 
-                <td>
-                    <select
-                        name="rows[${index}][branch_id]"
-                        class="form-select"
-                        required>
+            form.addEventListener('submit', function (e) {
 
-                        <option value="">Select Branch</option>
+                e.preventDefault();
 
-                        @foreach($branches as $branch)
-                            <option value="{{ $branch->id }}">
-                                {{ $branch->branch_name }}
-                            </option>
-                        @endforeach
+                const fileInput = document.getElementById('excel_file');
 
-                    </select>
-                </td>
+                if (!fileInput.files.length) {
+                    alert('Please select an Excel file.');
+                    return;
+                }
 
-                <td>
-                    <input
-                        type="date"
-                        name="rows[${index}][date]"
-                        class="form-control"
-                        value="{{ date('Y-m-d') }}"
-                        required>
-                </td>
+                const formData = new FormData(form);
 
-                <td>
-                    <textarea
-                        name="rows[${index}][message]"
-                        class="form-control"
-                        rows="2"
-                        placeholder="Enter SMS Message"
-                        required></textarea>
-                </td>
+                const xhr = new XMLHttpRequest();
 
-                <td>
-                    <input
-                        type="number"
-                        name="rows[${index}][submit_count]"
-                        class="form-control"
-                        min="0"
-                        placeholder="0"
-                        required>
-                </td>
+                const button = document.getElementById('uploadBtn');
+                const buttonText = document.getElementById('uploadBtnText');
+                const spinner = document.getElementById('uploadSpinner');
 
-                <td>
-                    <input
-                        type="number"
-                        name="rows[${index}][credit]"
-                        class="form-control"
-                        min="0"
-                        placeholder="0"
-                        required>
-                </td>
+                const progressArea = document.getElementById('progressArea');
+                const progressBar = document.getElementById('progressBar');
+                const progressText = document.getElementById('progressText');
+                const progressPercent = document.getElementById('progressPercent');
+                const progressMessage = document.getElementById('progressMessage');
 
-                <td class="text-center">
+                const resultArea = document.getElementById('resultArea');
 
-                    <button
-                        type="button"
-                        class="btn btn-danger btn-sm removeRow">
+                button.disabled = true;
+                spinner.classList.remove('d-none');
+                buttonText.innerHTML = 'Processing...';
 
-                        <i class="ri-delete-bin-line"></i>
+                resultArea.innerHTML = '';
 
-                    </button>
+                progressArea.classList.remove('d-none');
 
-                </td>
+                progressBar.style.width = '0%';
+                progressBar.innerText = '0%';
 
-            </tr>
-            `;
-        }
+                progressPercent.innerText = '0%';
 
-        /*=========================================
-            Add Row
-        =========================================*/
-        $("#addRow").click(function () {
+                progressText.innerText = 'Uploading Excel...';
 
-            $("#entryTable tbody").append(createRow(rowIndex));
+                progressMessage.innerText = 'Please wait...';
 
-            rowIndex++;
+                xhr.open(
+                    'POST',
+                    '{{ route("sms.import.store") }}',
+                    true
+                );
 
-        });
+                xhr.setRequestHeader(
+                    'X-CSRF-TOKEN',
+                    '{{ csrf_token() }}'
+                );
 
-        /*=========================================
-            Remove Row
-        =========================================*/
-        $(document).on("click", ".removeRow", function () {
+                // File upload progress
 
-            if ($("#entryTable tbody tr").length == 1) {
+                xhr.upload.addEventListener('progress', function (e) {
 
-                Swal.fire({
-                    icon: "warning",
-                    title: "Warning",
-                    text: "At least one row is required."
-                });
+                    if (e.lengthComputable) {
 
-                return;
-            }
+                        const percent = Math.round(
+                            (e.loaded / e.total) * 100
+                        );
 
-            $(this).closest("tr").remove();
+                        progressBar.style.width = percent + '%';
+                        progressBar.innerText = percent + '%';
 
-        });
+                        progressPercent.innerText = percent + '%';
 
-        /*=========================================
-            Reset Form Helper
-        =========================================*/
-        function resetForm() {
+                        if (percent === 100) {
 
-            $("#smsForm")[0].reset();
+                            progressText.innerText = 'Importing records...';
 
-            $("#entryTable tbody").html(createRow(0));
+                            progressMessage.innerText =
+                                'File uploaded. Saving SMS records into monthly tables...';
 
-            rowIndex = 1;
-
-        }
-
-        /*=========================================
-            jQuery Validation
-        =========================================*/
-        $("#smsForm").validate({
-
-            submitHandler: function (form) {
-
-                $.ajax({
-
-                    url: "{{ route('sms.store') }}",
-
-                    type: "POST",
-
-                    data: $(form).serialize(),
-
-                    success: function (response) {
-
-                        Swal.fire({
-
-                            icon: "success",
-
-                            title: "Success",
-
-                            text: response.message,
-
-                            timer: 2000,
-
-                            showConfirmButton: false
-
-                        });
-
-                        resetForm();
-
-                        table.ajax.reload(null, false);
-
-                    },
-
-                    error: function (xhr) {
-
-                        let message = "Something went wrong.";
-
-                        if (xhr.responseJSON && xhr.responseJSON.message) {
-
-                            message = xhr.responseJSON.message;
+                            progressBar.classList.remove(
+                                'progress-bar-animated'
+                            );
 
                         }
-
-                        Swal.fire({
-
-                            icon: "error",
-
-                            title: "Error",
-
-                            text: message
-
-                        });
 
                     }
 
                 });
 
-            }
+
+                // Server response
+
+                xhr.onload = function () {
+
+                    button.disabled = false;
+
+                    spinner.classList.add('d-none');
+
+                    buttonText.innerHTML =
+                        '<i class="fas fa-upload me-2"></i> Upload Excel';
+
+                    let response;
+
+                    try {
+
+                        response = JSON.parse(xhr.responseText);
+
+                    } catch (error) {
+
+                        resultArea.innerHTML = `
+                            <div class="alert alert-danger">
+                                Invalid server response. Please check Laravel logs.
+                            </div>
+                        `;
+
+                        return;
+                    }
+
+                    if (xhr.status >= 200 &&
+                        xhr.status < 300 &&
+                        response.success) {
+
+                        progressBar.style.width = '100%';
+                        progressBar.innerText = '100%';
+
+                        progressPercent.innerText = '100%';
+
+                        progressText.innerText = 'Import Completed';
+
+                        progressMessage.innerText =
+                            'All available Excel chunks have been processed.';
+
+                        progressBar.classList.remove(
+                            'progress-bar-animated'
+                        );
+
+                        resultArea.innerHTML = `
+
+                            <div class="alert alert-success">
+
+                                <h5 class="fw-bold">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    Import Successful!
+                                </h5>
+
+                                <hr>
+
+                                <div class="row text-center">
+
+                                    <div class="col-6 col-md-4 mb-3">
+                                        <h4>${response.total_rows}</h4>
+                                        <small>Total Rows</small>
+                                    </div>
+
+                                    <div class="col-6 col-md-4 mb-3">
+                                        <h4>${response.imported}</h4>
+                                        <small>Imported</small>
+                                    </div>
+
+                                    <div class="col-6 col-md-4 mb-3">
+                                        <h4>${response.duplicates}</h4>
+                                        <small>Duplicates</small>
+                                    </div>
+
+                                    <div class="col-6 col-md-4">
+                                        <h4>${response.failed}</h4>
+                                        <small>Failed</small>
+                                    </div>
+
+                                    <div class="col-6 col-md-4">
+                                        <h4>${response.processed}</h4>
+                                        <small>Processed</small>
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        `;
+
+                        // Clear selected file
+                        form.reset();
+
+                    } else {
+
+                        progressText.innerText = 'Import Failed';
+
+                        resultArea.innerHTML = `
+
+                            <div class="alert alert-danger">
+                                <strong>Import Failed!</strong>
+                                <p class="mb-0">
+                                    ${response.message || 'Something went wrong.'}
+                                </p>
+                            </div>
+
+                        `;
+
+                    }
+
+                };
+
+
+                xhr.onerror = function () {
+
+                    button.disabled = false;
+
+                    spinner.classList.add('d-none');
+
+                    buttonText.innerHTML = 'Upload Excel';
+
+                    resultArea.innerHTML = `
+
+                        <div class="alert alert-danger">
+                            Network error. Please try again.
+                        </div>
+
+                    `;
+
+                };
+
+
+                xhr.send(formData);
+
+            });
 
         });
-
-        /*=========================================
-            DataTable
-        =========================================*/
-        let table = $("#smsTable").DataTable({
-
-            processing: true,
-
-            serverSide: true,
-
-            ajax: "{{ route('sms.list') }}",
-
-            columns: [
-
-                {
-                    data: "DT_RowIndex",
-                    name: "DT_RowIndex",
-                    searchable: false,
-                    orderable: false
-                },
-
-                {
-                    data: "branch",
-                    name: "branch"
-                },
-
-                {
-                    data: "date",
-                    name: "date"
-                },
-
-                {
-                    data: "message",
-                    name: "message"
-                },
-
-                {
-                    data: "submit_count",
-                    name: "submit_count"
-                },
-
-                {
-                    data: "credit",
-                    name: "credit"
-                },
-
-                // {
-                //     data: "action",
-                //     name: "action",
-                //     searchable: false,
-                //     orderable: false
-                // }
-
-            ]
-
-        });
-
-
-            /*========================================
-            =
-            jQuery Validation
-        =========================================*/
-
-    
-        /*=========================================
-            Reload DataTable Helper
-        =========================================*/
-
-        function reloadTable()
-        {
-
-            table.ajax.reload(null, false);
-
-        }
-
-    });
-
-
 
     </script>
 
-    @endpush
-
-    </x-app-layout>
+</x-app-layout>

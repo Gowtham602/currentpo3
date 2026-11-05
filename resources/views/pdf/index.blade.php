@@ -49,13 +49,32 @@
 
                                 @csrf
                                 <input type="file" id="newImage" accept="image/*" hidden>
-                                <div class="card-body">
+                                <!-- <div class="card-body">
                                     <input type="file" class="filepond filepond-input-multiple" name="pdf" id="pdf" data-allow-reorder="true" data-max-file-size="3MB" data-max-files="3">
                                 </div>
 
                                 <div class="mt-2 mb-2 text-center">
                                     <button type="submit" class="btn btn-primary">
                                         <i class="fa-solid fa-cloud-arrow-up me-2"></i> Upload PDF
+                                    </button>
+                                </div> -->
+
+                                <div class="card-body">
+                                    <input
+                                        type="file"
+                                        class="filepond filepond-input-multiple"
+                                        name="pdf"
+                                        id="pdf"
+                                        accept="application/pdf"
+                                        data-max-file-size="70MB"
+                                        data-max-files="1"
+                                    >
+                                </div>
+
+                                <div class="mt-2 mb-2 text-center">
+                                    <button type="submit" class="btn btn-primary" id="uploadBtn">
+                                        <i class="fa-solid fa-cloud-arrow-up me-2"></i>
+                                        <span id="uploadBtnText">Upload PDF</span>
                                     </button>
                                 </div>
                             </form>
@@ -430,53 +449,140 @@
             `);
         });
     }
-        $("#pdfForm").submit(function(e) {
+    //     $("#pdfForm").submit(function(e) {
     
-        e.preventDefault();
+    //     e.preventDefault();
     
-        const pond = FilePond.find(document.getElementById('pdf'));
-        const pondFiles = pond ? pond.getFiles() : [];
+    //     const pond = FilePond.find(document.getElementById('pdf'));
+    //     const pondFiles = pond ? pond.getFiles() : [];
     
-        if (!pondFiles.length) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Oops...',
-                text: 'Please add a PDF before proceeding.',
-                confirmButtonText: 'Got it',
-                timer: 3000,
-                timerProgressBar: true
-            });
-            return;
-        }
+    //     if (!pondFiles.length) {
+    //         Swal.fire({
+    //             icon: 'warning',
+    //             title: 'Oops...',
+    //             text: 'Please add a PDF before proceeding.',
+    //             confirmButtonText: 'Got it',
+    //             timer: 3000,
+    //             timerProgressBar: true
+    //         });
+    //         return;
+    //     }
     
-        let formData = new FormData();
-        formData.append('pdf', pondFiles[0].file);
-        formData.append('_token', '{{ csrf_token() }}');
+    //     let formData = new FormData();
+    //     formData.append('pdf', pondFiles[0].file);
+    //     formData.append('_token', '{{ csrf_token() }}');
     
-        $.ajax({
-            url: "{{ route('pdf.upload') }}",
-            type: "POST",
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(res) {
-                console.log(res, "...res01");
-                renderPages(res);
-                $('#generate_form').show();
-            },
-            error: function(xhr) {
-                console.log(xhr);
-                if (xhr.responseJSON) {
-                    alert(xhr.responseJSON.message);
-                } else {
-                    alert(xhr.responseText);
-                }
-            }
+    //     $.ajax({
+    //         url: "{{ route('pdf.upload') }}",
+    //         type: "POST",
+    //         data: formData,
+    //         processData: false,
+    //         contentType: false,
+    //         success: function(res) {
+    //             console.log(res, "...res01");
+    //             renderPages(res);
+    //             $('#generate_form').show();
+    //         },
+    //         error: function(xhr) {
+    //             console.log(xhr);
+    //             if (xhr.responseJSON) {
+    //                 alert(xhr.responseJSON.message);
+    //             } else {
+    //                 alert(xhr.responseText);
+    //             }
+    //         }
+    //     });
+    
+    // });
+    
+    
+$("#pdfForm").submit(function(e) {
+
+    e.preventDefault();
+
+    const pdfInput = document.getElementById('pdf');
+    const pond = FilePond.find(pdfInput);
+    const pondFiles = pond ? pond.getFiles() : [];
+
+    if (!pondFiles.length) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Select PDF',
+            text: 'Please select a PDF before uploading.'
         });
-    
+        return;
+    }
+
+    let formData = new FormData();
+
+    formData.append('pdf', pondFiles[0].file);
+    formData.append('_token', '{{ csrf_token() }}');
+
+    $.ajax({
+
+        url: "{{ route('pdf.upload') }}",
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+
+        beforeSend: function() {
+
+            // Show upload spinner
+            $("#uploadBtn")
+                .prop("disabled", true)
+                .html(
+                    '<i class="fa fa-spinner fa-spin me-2"></i> Uploading...'
+                );
+
+        },
+
+        success: function(res) {
+
+            console.log(res);
+
+            // Show converted PDF pages
+            renderPages(res);
+
+            $("#generate_form").show();
+
+            toastr.success(res.message);
+
+            // Optional: display compression information
+            if (res.compression) {
+                toastr.info(
+                    'Final PDF size: ' + res.compression.final_size
+                );
+            }
+
+        },
+
+        error: function(xhr) {
+
+            console.log(xhr);
+
+            let message = xhr.responseJSON?.message
+                || "PDF upload failed.";
+
+            toastr.error(message);
+
+        },
+
+        complete: function() {
+
+            // Hide spinner and enable button
+            $("#uploadBtn")
+                .prop("disabled", false)
+                .html(
+                    '<i class="fa-solid fa-cloud-arrow-up me-2"></i> Upload PDF'
+                );
+
+        }
+
     });
-    
-    
+
+});
+
     
     
         let insertPosition = 0;
@@ -744,9 +850,19 @@
     
         resultOffcanvas.hide();
     
-        // Reset Upload Form
-        $("#pdfForm")[0].reset();
-    
+      // Clear FilePond selected PDF
+const pdfInput = document.getElementById('pdf');
+const pond = FilePond.find(pdfInput);
+
+if (pond) {
+    pond.removeFiles();
+}
+
+// Clear normal file input too
+pdfInput.value = "";
+
+// Reset form
+$("#pdfForm")[0].reset();
         // Reset Generate Form
         $("#image_name").val("");
         $("#district_id").val("");
@@ -774,7 +890,7 @@
             .html('<i class="fa-solid fa-image me-2"></i> Generate Image');
     
         // Reload DataTable
-        //$("#example").DataTable().ajax.reload(null, false);
+        // $("#example").DataTable().ajax.reload(null, false);
     	$('#example').load(location.href + ' #example > *');
     
     },
@@ -820,7 +936,7 @@
       menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
     });
     </script>
-    <script>
+    <!-- <script>
         function initializeTables() {
             new DataTable("#example"), new DataTable("#scroll-vertical", {
                 scrollY: "210px",
@@ -841,6 +957,6 @@
         document.addEventListener("DOMContentLoaded", function() {
             initializeTables()
         });
-    </script>
+    </script> -->
 </x-app-layout>
 <script src="{{ asset('assets/js/pages/form-file-upload.init.js') }}"></script>

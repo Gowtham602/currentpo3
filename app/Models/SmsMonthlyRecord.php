@@ -226,59 +226,116 @@ class SmsMonthlyRecord extends Model
     /**
      * Update matching records or insert new records.
      */
-    public static function insertMonthlyRow(
-        string $table,
-        array $data
-    ): string {
-        self::validateTable($table);
-        self::ensureMonthlyTable($table);
+    // public static function insertMonthlyRow(
+    //     string $table,
+    //     array $data
+    // ): string {
+    //     self::validateTable($table);
+    //     self::ensureMonthlyTable($table);
 
-        $sentTime = trim((string) ($data['sent_time'] ?? ''));
-        $trackId = trim((string) ($data['track_id'] ?? ''));
+    //     $sentTime = trim((string) ($data['sent_time'] ?? ''));
+    //     $trackId = trim((string) ($data['track_id'] ?? ''));
 
-        if ($sentTime === '' || $trackId === '') {
-            throw new InvalidArgumentException(
-                'Sent Time and TrackID are required.'
-            );
-        }
+    //     if ($sentTime === '' || $trackId === '') {
+    //         throw new InvalidArgumentException(
+    //             'Sent Time and TrackID are required.'
+    //         );
+    //     }
 
-        $data['sent_time'] = $sentTime;
-        $data['track_id'] = $trackId;
+    //     $data['sent_time'] = $sentTime;
+    //     $data['track_id'] = $trackId;
 
-        unset(
-            $data['id'],
-            $data['created_at'],
-            $data['updated_at']
+    //     unset(
+    //         $data['id'],
+    //         $data['created_at'],
+    //         $data['updated_at']
+    //     );
+
+    //     return DB::transaction(function () use (
+    //         $table,
+    //         $data,
+    //         $sentTime,
+    //         $trackId
+    //     ) {
+    //         $existing = DB::table($table)
+    //             ->where('sent_time', $sentTime)
+    //             ->where('track_id', $trackId)
+    //             ->orderBy('id', 'asc')
+    //             ->first();
+
+    //         if ($existing) {
+    //             DB::table($table)
+    //                 ->where('id', $existing->id)
+    //                 ->update(array_merge($data, [
+    //                     'updated_at' => now(),
+    //                 ]));
+
+    //             return 'updated';
+    //         }
+
+    //         DB::table($table)->insert(array_merge($data, [
+    //             'created_at' => now(),
+    //             'updated_at' => now(),
+    //         ]));
+
+    //         return 'inserted';
+    //     });
+    // }
+    
+/**
+ * Update matching records or insert new records.
+ * Optimized to avoid repeated table schema checks.
+ */
+public static function insertMonthlyRow(
+    string $table,
+    array $data
+): string {
+    self::validateTable($table);
+
+    // Table is already prepared once by the upload controller.
+    // Do not call ensureMonthlyTable() here.
+
+    $sentTime = trim((string) ($data['sent_time'] ?? ''));
+    $trackId = trim((string) ($data['track_id'] ?? ''));
+
+    if ($sentTime === '' || $trackId === '') {
+        throw new InvalidArgumentException(
+            'Sent Time and TrackID are required.'
         );
+    }
 
-        return DB::transaction(function () use (
-            $table,
-            $data,
-            $sentTime,
-            $trackId
-        ) {
-            $existing = DB::table($table)
-                ->where('sent_time', $sentTime)
-                ->where('track_id', $trackId)
-                ->orderBy('id', 'asc')
-                ->first();
+    $data['sent_time'] = $sentTime;
+    $data['track_id'] = $trackId;
 
-            if ($existing) {
-                DB::table($table)
-                    ->where('id', $existing->id)
-                    ->update(array_merge($data, [
-                        'updated_at' => now(),
-                    ]));
+    unset(
+        $data['id'],
+        $data['created_at'],
+        $data['updated_at']
+    );
 
-                return 'updated';
-            }
+    $existing = DB::table($table)
+        ->where('sent_time', $sentTime)
+        ->where('track_id', $trackId)
+        ->orderBy('id', 'asc')
+        ->first(['id']);
 
-            DB::table($table)->insert(array_merge($data, [
-                'created_at' => now(),
+    if ($existing) {
+        DB::table($table)
+            ->where('id', $existing->id)
+            ->update(array_merge($data, [
                 'updated_at' => now(),
             ]));
 
-            return 'inserted';
-        });
+        return 'updated';
     }
+
+    DB::table($table)->insert(array_merge($data, [
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]));
+
+    return 'inserted';
 }
+
+}
+

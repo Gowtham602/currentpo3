@@ -148,8 +148,8 @@
                                     <tr>
                                         <th>#</th>
                                         <th>IP Address</th>
-                                        <th>Browser</th>
-                                        <th>Device</th>
+                                        <!-- <th>Browser</th> -->
+                                        <!-- <th>Device</th> -->
                                         <th>City</th>
                                         <th>Country</th>
                                         <th>Date & Time</th>
@@ -167,9 +167,9 @@
 
                                             <td>{{ $click->ip_address }}</td>
 
-                                            <td>{{ $click->browser }}</td>
+                                            <!-- <td>{{ $click->browser }}</td> -->
 
-                                            <td>{{ $click->device_type }}</td>
+                                            <!-- <td>{{ $click->device_type }}</td> -->
 
                                             <td>{{ $click->city ?? '-' }}</td>
 

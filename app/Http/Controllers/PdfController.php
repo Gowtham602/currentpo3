@@ -31,6 +31,7 @@ class PdfController extends Controller
   
 
 
+
 public function list(Request $request)
 {
     if ($request->ajax()) {
@@ -69,125 +70,729 @@ public function list(Request $request)
             ->make(true);
     }
 }
-    public function upload(Request $request)
-    {
-        $request->validate([
-            'pdf' => 'required|mimes:pdf|max:51200',
-        ]);
+//     public function upload(Request $request)
+//     {
+//         $request->validate([
+//             'pdf' => 'required|mimes:pdf|max:31680',
+//         ]);
 
-        // Upload one PDF at a time. Existing pages for this session are preserved.
-        $pdf = $request->file('pdf');
+//         // Upload one PDF at a time. Existing pages for this session are preserved.
+//         $pdf = $request->file('pdf');
 
-        // Unique filename so multiple PDF uploads do not overwrite each other.
-        $fileName = time() . '_' . uniqid();
+//         // Unique filename so multiple PDF uploads do not overwrite each other.
+//         $fileName = time() . '_' . uniqid();
 
-        $pdfPath = $pdf->storeAs(
-            'pdfs',
-            $fileName . '.pdf'
-        );
+//         $pdfPath = $pdf->storeAs(
+//             'pdfs',
+//             $fileName . '.pdf'
+//         );
 
-        $input = storage_path('app/' . $pdfPath);
+//         $input = storage_path('app/' . $pdfPath);
 
-        // Folder for converted pages
-        $outputFolder = storage_path(
-            'app/public/temp-pages'
-        );
 
-        if (!file_exists($outputFolder)) {
-            mkdir($outputFolder, 0777, true);
-        }
 
-        // Output pattern
-        $output = $outputFolder .
-            '/' .
-            $fileName .
-            'page%03d.png';
+//         // Folder for converted pages
+//         $outputFolder = storage_path(
+//             'app/public/temp-pages'
+//         );
 
-        // Ghostscript Command
-        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+//         if (!file_exists($outputFolder)) {
+//             mkdir($outputFolder, 0777, true);
+//         }
 
-        $gs = '"C:\\Program Files\\gs\\gs10.08.0\\bin\\gswin64c.exe"';
+//         // Output pattern
+//         $output = $outputFolder .
+//             '/' .
+//             $fileName .
+//             'page%03d.png';
 
-    } else {
+//         // Ghostscript Command
+//         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
 
-        $gs = '/usr/bin/gs';
+//         $gs = '"C:\\Program Files\\gs\\gs10.08.0\\bin\\gswin64c.exe"';
+
+//     } else {
+
+//         $gs = '/usr/bin/gs';
+//     }
+
+// $command = $gs .
+//     ' -dNOPAUSE' .
+//     ' -dBATCH' .
+//     ' -sDEVICE=png16m' .
+//     ' -r150' .
+//     ' -o "' . $output . '"' .
+//     ' "' . $input . '"';
+
+// exec($command . ' 2>&1', $result, $status);
+
+// if ($status != 0) {
+//     return response()->json([
+//         'success' => false,
+//         'command' => $command,
+//         'status' => $status,
+//         'output' => $result
+//     ], 500);
+// }
+// //         dd([
+// //     'status' => $status,
+// //     'files' => glob($outputFolder . '/*'),
+// // ]);
+
+//         if ($status != 0) {
+
+//             return response()->json([
+//                 'success' => false,
+//                 'message' => 'Ghostscript conversion failed.'
+//             ], 500);
+
+//         }
+
+//         // Read Generated Images
+//         $pages = glob(
+//             $outputFolder .
+//             '/' .
+//             $fileName .
+//             'page*.png'
+//         );
+
+//         // Continue from the last page already uploaded in this session.
+//         $lastOrder = TempPage::where('session_id', session()->getId())
+//             ->max('sort_order');
+
+//         $sortOrder = $lastOrder ? ((int) $lastOrder + 1) : 1;
+
+//         $images = [];
+
+//         foreach ($pages as $page) {
+
+//             $relativePath = 'temp-pages/' . basename($page);
+
+//             $temp = TempPage::create([
+//                 'session_id' => session()->getId(),
+//                 'image_path' => $relativePath,
+//                 'sort_order' => $sortOrder,
+//             ]);
+
+//             $images[] = [
+//                 'id' => $temp->id,
+//                 'image' => asset('storage/' . $relativePath),
+//                 'sort_order' => $sortOrder,
+//             ];
+
+//             $sortOrder++;
+//         }
+
+//         return response()->json([
+
+//             'success' => true,
+
+//             'images' => $images
+
+//         ]);
+//     }
+
+
+
+// public function upload(Request $request)
+// {
+//     /*
+//     |--------------------------------------------------------------------------
+//     | STEP 1: Validate PDF
+//     |--------------------------------------------------------------------------
+//     */
+
+//     $request->validate([
+//         'pdf' => 'required|mimes:pdf|max:71680',
+//     ]);
+
+//     $pdf = $request->file('pdf');
+
+//     $originalSize = $pdf->getSize();
+
+//     // Compress only when PDF is above 8 MB
+//     $compressionLimit = 8 * 1024 * 1024;
+
+//     $fileName = time() . '_' . uniqid();
+
+//     /*
+//     |--------------------------------------------------------------------------
+//     | STEP 2: Store Original PDF
+//     |--------------------------------------------------------------------------
+//     */
+
+//     $pdfPath = $pdf->storeAs(
+//         'pdfs',
+//         $fileName . '.pdf'
+//     );
+
+//     if (!$pdfPath) {
+//         return response()->json([
+//             'success' => false,
+//             'message' => 'Unable to store PDF.',
+//         ], 500);
+//     }
+
+//     $input = storage_path('app/' . $pdfPath);
+
+//     $finalSize = $originalSize;
+//     $compressed = false;
+
+//     $isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
+
+//     $gs = $isWindows
+//         ? '"C:\\Program Files\\gs\\gs10.08.0\\bin\\gswin64c.exe"'
+//         : '/usr/bin/gs';
+
+//     /*
+//     |--------------------------------------------------------------------------
+//     | STEP 3: Automatic PDF Compression
+//     |--------------------------------------------------------------------------
+//     */
+
+//     if ($originalSize > $compressionLimit) {
+
+//         $compressedPath = storage_path(
+//             'app/pdfs/' . $fileName . '_compressed.pdf'
+//         );
+
+//         $command = $gs .
+//             ' -sDEVICE=pdfwrite' .
+//             ' -dCompatibilityLevel=1.5' .
+//             ' -dPDFSETTINGS=/ebook' .
+//             ' -dNOPAUSE' .
+//             ' -dBATCH' .
+//             ' -dQUIET' .
+//             ' -dDetectDuplicateImages=true' .
+//             ' -dCompressFonts=true' .
+//             ' -sOutputFile=' . escapeshellarg($compressedPath) .
+//             ' ' . escapeshellarg($input);
+
+//         exec($command . ' 2>&1', $compressOutput, $compressStatus);
+
+//         if (
+//             $compressStatus === 0 &&
+//             File::exists($compressedPath) &&
+//             filesize($compressedPath) > 0
+//         ) {
+
+//             $compressedSize = filesize($compressedPath);
+
+//             // Replace original only when compressed PDF is smaller
+//             if ($compressedSize < $originalSize) {
+
+//                 File::delete($input);
+
+//                 File::move($compressedPath, $input);
+
+//                 $finalSize = $compressedSize;
+//                 $compressed = true;
+
+//             } else {
+
+//                 File::delete($compressedPath);
+//             }
+
+//         } else {
+
+//             if (File::exists($compressedPath)) {
+//                 File::delete($compressedPath);
+//             }
+
+//             \Log::warning('PDF compression failed', [
+//                 'file' => $fileName,
+//                 'status' => $compressStatus,
+//                 'output' => $compressOutput ?? [],
+//             ]);
+//         }
+//     }
+
+//     /*
+//     |--------------------------------------------------------------------------
+//     | STEP 4: Convert PDF into PNG Pages
+//     |--------------------------------------------------------------------------
+//     */
+
+//     $outputFolder = storage_path('app/public/temp-pages');
+
+//     if (!File::exists($outputFolder)) {
+//         File::makeDirectory($outputFolder, 0777, true);
+//     }
+
+//     // Ghostscript page-number pattern
+//     $output = $outputFolder . DIRECTORY_SEPARATOR .
+//         $fileName . 'page%03d.png';
+
+//     if ($isWindows) {
+
+//         // Windows: preserve %03d in the output pattern
+//         $command = $gs .
+//             ' -dNOPAUSE' .
+//             ' -dBATCH' .
+//             ' -sDEVICE=png16m' .
+//             ' -r150' .
+//             ' -o "' . $output . '"' .
+//             ' "' . $input . '"';
+
+//     } else {
+
+//         // Linux: safely escape output and input paths
+//         $command = $gs .
+//             ' -dNOPAUSE' .
+//             ' -dBATCH' .
+//             ' -sDEVICE=png16m' .
+//             ' -r150' .
+//             ' -o ' . escapeshellarg($output) .
+//             ' ' . escapeshellarg($input);
+//     }
+
+//     exec($command . ' 2>&1', $convertOutput, $convertStatus);
+
+//     if ($convertStatus !== 0) {
+
+//         \Log::error('PDF conversion failed', [
+//             'file' => $fileName,
+//             'status' => $convertStatus,
+//             'output' => $convertOutput,
+//         ]);
+
+//         return response()->json([
+//             'success' => false,
+//             'message' => 'PDF conversion failed.',
+//         ], 500);
+//     }
+
+//     /*
+//     |--------------------------------------------------------------------------
+//     | STEP 5: Read All Generated PNG Pages
+//     |--------------------------------------------------------------------------
+//     */
+
+//     $pages = glob(
+//         $outputFolder . DIRECTORY_SEPARATOR .
+//         $fileName . 'page*.png'
+//     );
+
+//     // Sort pages in natural order
+//     natsort($pages);
+
+//     $pages = array_values($pages);
+
+//     \Log::info('PDF Conversion Results', [
+//         'file' => $fileName,
+//         'total_pages_generated' => count($pages),
+//         'generated_files' => array_map('basename', $pages),
+//     ]);
+
+//     if (empty($pages)) {
+
+//         return response()->json([
+//             'success' => false,
+//             'message' => 'No PDF pages were generated.',
+//         ], 500);
+//     }
+
+//     /*
+//     |--------------------------------------------------------------------------
+//     | STEP 6: Save All Pages into TempPage Table
+//     |--------------------------------------------------------------------------
+//     */
+
+//     $lastOrder = TempPage::where(
+//         'session_id',
+//         session()->getId()
+//     )->max('sort_order');
+
+//     $sortOrder = $lastOrder
+//         ? ((int) $lastOrder + 1)
+//         : 1;
+
+//     $images = [];
+
+//     foreach ($pages as $page) {
+
+//         $relativePath = 'temp-pages/' . basename($page);
+
+//         $temp = TempPage::create([
+//             'session_id' => session()->getId(),
+//             'image_path' => $relativePath,
+//             'sort_order' => $sortOrder,
+//         ]);
+
+//         $images[] = [
+//             'id' => $temp->id,
+//             'image' => asset('storage/' . $relativePath),
+//             'sort_order' => $sortOrder,
+//         ];
+
+//         $sortOrder++;
+//     }
+
+//     /*
+//     |--------------------------------------------------------------------------
+//     | STEP 7: Return Upload Response
+//     |--------------------------------------------------------------------------
+//     */
+
+//     return response()->json([
+
+//         'success' => true,
+
+//         'message' => 'PDF uploaded and converted successfully.',
+
+//         'debug' => [
+//             'total_pages' => count($pages),
+//         ],
+
+//         'compression' => [
+
+//             'compressed' => $compressed,
+
+//             'original_size' => round(
+//                 $originalSize / 1024 / 1024,
+//                 2
+//             ) . ' MB',
+
+//             'final_size' => round(
+//                 $finalSize / 1024 / 1024,
+//                 2
+//             ) . ' MB',
+
+//             'saved_size' => round(
+//                 ($originalSize - $finalSize) / 1024 / 1024,
+//                 2
+//             ) . ' MB',
+//         ],
+
+//         'images' => $images,
+
+//     ]);
+// }
+
+public function upload(Request $request)
+{
+    /*
+    |--------------------------------------------------------------------------
+    | STEP 1: Validate PDF
+    |--------------------------------------------------------------------------
+    */
+
+    $request->validate([
+        'pdf' => 'required|file|mimes:pdf|max:71680',
+    ]);
+
+    $pdf = $request->file('pdf');
+
+    $originalSize = $pdf->getSize();
+
+    // Compress only PDFs above 8 MB
+    $compressionLimit = 8 * 1024 * 1024;
+
+    $fileName = time() . '_' . uniqid();
+
+    /*
+    |--------------------------------------------------------------------------
+    | STEP 2: Detect Operating System and Ghostscript
+    |--------------------------------------------------------------------------
+    */
+
+    $isWindows = PHP_OS_FAMILY === 'Windows';
+
+    $gsPath = $isWindows
+        ? 'C:\\Program Files\\gs\\gs10.08.0\\bin\\gswin64c.exe'
+        : '/usr/bin/gs';
+
+    if (!File::exists($gsPath)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Ghostscript not found. Please check its installation path.',
+        ], 500);
     }
 
-$command = $gs .
-    ' -dNOPAUSE' .
-    ' -dBATCH' .
-    ' -sDEVICE=png16m' .
-    ' -r150' .
-    ' -o "' . $output . '"' .
-    ' "' . $input . '"';
+    // Correct path quoting for Windows and Linux
+    $quotePath = function ($path) use ($isWindows) {
+        return $isWindows
+            ? '"' . str_replace('"', '\\"', $path) . '"'
+            : escapeshellarg($path);
+    };
 
-exec($command . ' 2>&1', $result, $status);
+    $gs = $quotePath($gsPath);
 
-if ($status != 0) {
-    return response()->json([
-        'success' => false,
-        'command' => $command,
-        'status' => $status,
-        'output' => $result
-    ], 500);
-}
-//         dd([
-//     'status' => $status,
-//     'files' => glob($outputFolder . '/*'),
-// ]);
+    /*
+    |--------------------------------------------------------------------------
+    | STEP 3: Store Original PDF
+    |--------------------------------------------------------------------------
+    */
 
-        if ($status != 0) {
+    $pdfPath = $pdf->storeAs(
+        'pdfs',
+        $fileName . '.pdf'
+    );
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Ghostscript conversion failed.'
-            ], 500);
+    if (!$pdfPath) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Unable to store PDF.',
+        ], 500);
+    }
 
-        }
+    $input = storage_path('app/' . $pdfPath);
 
-        // Read Generated Images
-        $pages = glob(
-            $outputFolder .
-            '/' .
-            $fileName .
-            'page*.png'
+    $finalSize = $originalSize;
+    $compressed = false;
+
+    /*
+    |--------------------------------------------------------------------------
+    | STEP 4: Automatic PDF Compression
+    |--------------------------------------------------------------------------
+    */
+
+    if ($originalSize > $compressionLimit) {
+
+        $compressedPath = storage_path(
+            'app/pdfs/' . $fileName . '_compressed.pdf'
         );
 
-        // Continue from the last page already uploaded in this session.
-        $lastOrder = TempPage::where('session_id', session()->getId())
-            ->max('sort_order');
+        $compressCommand = $gs .
+            ' -sDEVICE=pdfwrite' .
+            ' -dCompatibilityLevel=1.5' .
+            ' -dPDFSETTINGS=/ebook' .
+            ' -dNOPAUSE' .
+            ' -dBATCH' .
+            ' -dQUIET' .
+            ' -dDetectDuplicateImages=true' .
+            ' -dCompressFonts=true' .
+            ' -sOutputFile=' . $quotePath($compressedPath) .
+            ' ' . $quotePath($input);
 
-        $sortOrder = $lastOrder ? ((int) $lastOrder + 1) : 1;
+        $compressOutput = [];
 
-        $images = [];
+        exec(
+            $compressCommand . ' 2>&1',
+            $compressOutput,
+            $compressStatus
+        );
 
-        foreach ($pages as $page) {
+        if (
+            $compressStatus === 0 &&
+            File::exists($compressedPath) &&
+            filesize($compressedPath) > 0
+        ) {
 
-            $relativePath = 'temp-pages/' . basename($page);
+            $compressedSize = filesize($compressedPath);
 
-            $temp = TempPage::create([
-                'session_id' => session()->getId(),
-                'image_path' => $relativePath,
-                'sort_order' => $sortOrder,
+            // Replace original only if compressed file is smaller
+            if ($compressedSize < $originalSize) {
+
+                if (File::copy($compressedPath, $input)) {
+
+                    File::delete($compressedPath);
+
+                    $finalSize = filesize($input);
+                    $compressed = true;
+
+                } else {
+
+                    \Log::warning('Unable to replace original PDF with compressed PDF', [
+                        'file' => $fileName,
+                    ]);
+
+                    File::delete($compressedPath);
+                }
+
+            } else {
+
+                // Keep original if compressed PDF is larger
+                File::delete($compressedPath);
+            }
+
+        } else {
+
+            if (File::exists($compressedPath)) {
+                File::delete($compressedPath);
+            }
+
+            \Log::warning('PDF compression failed', [
+                'file' => $fileName,
+                'status' => $compressStatus,
+                'output' => $compressOutput,
             ]);
-
-            $images[] = [
-                'id' => $temp->id,
-                'image' => asset('storage/' . $relativePath),
-                'sort_order' => $sortOrder,
-            ];
-
-            $sortOrder++;
         }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | STEP 5: Convert PDF into PNG Pages
+    |--------------------------------------------------------------------------
+    */
+
+    $outputFolder = storage_path('app/public/temp-pages');
+
+    if (!File::exists($outputFolder)) {
+        File::makeDirectory($outputFolder, 0777, true);
+    }
+
+    // %03d generates page001, page002, page003...
+    $output = $outputFolder . DIRECTORY_SEPARATOR .
+        $fileName . 'page%03d.png';
+
+    $convertCommand = $gs .
+        ' -dNOPAUSE' .
+        ' -dBATCH' .
+        ' -sDEVICE=png16m' .
+        ' -r150' .
+        ' -o ' . $quotePath($output) .
+        ' ' . $quotePath($input);
+
+    $convertOutput = [];
+
+    exec(
+        $convertCommand . ' 2>&1',
+        $convertOutput,
+        $convertStatus
+    );
+
+    if ($convertStatus !== 0) {
+
+        \Log::error('PDF conversion failed', [
+            'file' => $fileName,
+            'status' => $convertStatus,
+            'command_output' => $convertOutput,
+        ]);
 
         return response()->json([
-
-            'success' => true,
-
-            'images' => $images
-
-        ]);
+            'success' => false,
+            'message' => 'PDF conversion failed.',
+        ], 500);
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | STEP 6: Read Generated PNG Pages
+    |--------------------------------------------------------------------------
+    */
+
+    $pages = glob(
+        $outputFolder . DIRECTORY_SEPARATOR .
+        $fileName . 'page*.png'
+    );
+
+    natsort($pages);
+
+    $pages = array_values($pages);
+
+    \Log::info('PDF Conversion Results', [
+        'file' => $fileName,
+        'original_size_mb' => round($originalSize / 1024 / 1024, 2),
+        'final_size_mb' => round($finalSize / 1024 / 1024, 2),
+        'compressed' => $compressed,
+        'total_pages_generated' => count($pages),
+        'generated_files' => array_map('basename', $pages),
+    ]);
+
+    if (empty($pages)) {
+
+        return response()->json([
+            'success' => false,
+            'message' => 'No PDF pages were generated.',
+        ], 500);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | STEP 7: Remove Previous Temporary Pages
+    |--------------------------------------------------------------------------
+    */
+
+    $sessionId = session()->getId();
+
+    $oldPages = TempPage::where('session_id', $sessionId)->get();
+
+    foreach ($oldPages as $oldPage) {
+
+        $oldPath = storage_path(
+            'app/public/' . $oldPage->image_path
+        );
+
+        if (File::exists($oldPath)) {
+            File::delete($oldPath);
+        }
+    }
+
+    TempPage::where('session_id', $sessionId)->delete();
+
+    /*
+    |--------------------------------------------------------------------------
+    | STEP 8: Save New Pages into TempPage Table
+    |--------------------------------------------------------------------------
+    */
+
+    $images = [];
+
+    $sortOrder = 1;
+
+    foreach ($pages as $page) {
+
+        $relativePath = 'temp-pages/' . basename($page);
+
+        $temp = TempPage::create([
+            'session_id' => $sessionId,
+            'image_path' => $relativePath,
+            'sort_order' => $sortOrder,
+        ]);
+
+        $images[] = [
+            'id' => $temp->id,
+            'image' => asset('storage/' . $relativePath),
+            'sort_order' => $sortOrder,
+        ];
+
+        $sortOrder++;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | STEP 9: Return Upload Response
+    |--------------------------------------------------------------------------
+    */
+
+    return response()->json([
+
+        'success' => true,
+
+        'message' => 'PDF uploaded and converted successfully.',
+
+        'debug' => [
+            'total_pages' => count($pages),
+        ],
+
+        'compression' => [
+
+            'compressed' => $compressed,
+
+            'original_size' => round(
+                $originalSize / 1024 / 1024,
+                2
+            ) . ' MB',
+
+            'final_size' => round(
+                $finalSize / 1024 / 1024,
+                2
+            ) . ' MB',
+
+            'saved_size' => round(
+                max(0, $originalSize - $finalSize) / 1024 / 1024,
+                2
+            ) . ' MB',
+        ],
+
+        'images' => $images,
+
+    ]);
+}
+
+
+
     public function addImage(Request $request)
 {
     $request->validate([
