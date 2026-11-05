@@ -7,6 +7,8 @@ use App\Http\Controllers\ShortUrlController;
 use App\Http\Controllers\SmsCreditController;
 use App\Http\Controllers\Admin\ApplicationAccessController;
 use App\Http\Controllers\Admin\SmsExcelImportController;
+use App\Http\Controllers\SmsImportController;
+use App\Http\Controllers\ImageToPdfController;
 
 /*
 |--------------------------------------------------------------------------
@@ -172,12 +174,38 @@ Route::post(
 )->name('image.update.expiry');
 
 //excel  greencard report 
-Route::get('/sms-import', [SmsExcelImportController::class,'index' ])->name('sms-import.index');
+// Route::get('/sms-import', [SmsExcelImportController::class,'index' ])->name('sms-import.index');
 
-Route::post('/sms-import', [SmsExcelImportController::class,'upload'])->name('sms-import.upload');
+// Route::post('/sms-import', [SmsExcelImportController::class,'upload'])->name('sms-import.upload');
 
 
+// Route::get('/sms-summary/export/excel', [SmsExcelImportController::class,'exportExcel'])->name('sms-summary.export.excel');
 
+// Route::get('/sms-summary/export/pdf', [SmsExcelImportController::class,'exportPdf'])->name('sms-summary.export.pdf');
+
+
+Route::prefix('sms')->name('sms.')->group(function () {
+
+    Route::get('/import', [SmsImportController::class, 'index'])
+        ->name('import');
+
+    Route::post('/import', [SmsImportController::class, 'import'])
+        ->name('import.store');
+
+});
+
+});
+
+// image t pdf 
+
+
+Route::middleware(['auth'])->group(function () {
+
+    Route::get('/image-to-pdf', [ImageToPdfController::class, 'index'])
+        ->name('image.pdf.index');
+
+    Route::post('/image-to-pdf/convert', [ImageToPdfController::class, 'convert'])
+        ->name('image.pdf.convert');
 
 });
 
