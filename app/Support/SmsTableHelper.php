@@ -24,27 +24,34 @@ class SmsTableHelper
         DB::statement("
             CREATE TABLE IF NOT EXISTS `$table` (
                 id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+
                 status VARCHAR(50) NULL,
                 description VARCHAR(255) NULL,
-                credit_deducted INT NOT NULL DEFAULT 0,
+
                 sent_time DATETIME NOT NULL,
-                sender_id VARCHAR(100) NULL,
                 track_id VARCHAR(150) NOT NULL,
-                credit_type VARCHAR(100) NULL,
+
                 circle VARCHAR(100) NULL,
                 message LONGTEXT NULL,
+
+                message_type VARCHAR(50) NOT NULL,
+                branch VARCHAR(50) NULL,
+
                 created_at TIMESTAMP NULL,
                 updated_at TIMESTAMP NULL,
 
                 PRIMARY KEY (id),
 
-                UNIQUE KEY unique_track_sent (track_id, sent_time),
+                UNIQUE KEY unique_track_sent
+                    (track_id, sent_time),
 
                 KEY idx_sent_time (sent_time),
-                KEY idx_status (status),
-                KEY idx_circle (circle)
+                KEY idx_branch_type (branch, message_type),
+                KEY idx_message_type (message_type)
 
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ) ENGINE=InnoDB
+              DEFAULT CHARSET=utf8mb4
+              COLLATE=utf8mb4_unicode_ci
         ");
     }
 }

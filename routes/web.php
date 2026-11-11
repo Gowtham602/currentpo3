@@ -174,25 +174,25 @@ Route::post(
 )->name('image.update.expiry');
 
 //excel  greencard report 
-// Route::get('/sms-import', [SmsExcelImportController::class,'index' ])->name('sms-import.index');
+Route::get('/sms-import', [SmsExcelImportController::class,'index' ])->name('sms-import.index');
 
-// Route::post('/sms-import', [SmsExcelImportController::class,'upload'])->name('sms-import.upload');
-
-
-// Route::get('/sms-summary/export/excel', [SmsExcelImportController::class,'exportExcel'])->name('sms-summary.export.excel');
-
-// Route::get('/sms-summary/export/pdf', [SmsExcelImportController::class,'exportPdf'])->name('sms-summary.export.pdf');
+Route::post('/sms-import', [SmsExcelImportController::class,'upload'])->name('sms-import.upload');
 
 
-Route::prefix('sms')->name('sms.')->group(function () {
+Route::get('/sms-summary/export/excel', [SmsExcelImportController::class,'exportExcel'])->name('sms-summary.export.excel');
 
-    Route::get('/import', [SmsImportController::class, 'index'])
-        ->name('import');
+Route::get('/sms-summary/export/pdf', [SmsExcelImportController::class,'exportPdf'])->name('sms-summary.export.pdf');
 
-    Route::post('/import', [SmsImportController::class, 'import'])
-        ->name('import.store');
 
-});
+// Route::prefix('sms')->name('sms.')->group(function () {
+
+//     Route::get('/import', [SmsImportController::class, 'index'])
+//         ->name('import');
+
+//     Route::post('/import', [SmsImportController::class, 'import'])
+//         ->name('import.store');
+
+// });
 
 });
 

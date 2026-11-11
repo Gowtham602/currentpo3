@@ -43,6 +43,20 @@
 						PDF -> Image
 					</a>
 				</div>
+                <div class="ms-1 header-item d-none d-sm-flex">
+    <a href="{{ route('image.pdf.index') }}"
+       class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600
+       {{ request()->routeIs('image.pdf.*') ? 'topbar-user' : '' }}">
+        Image to PDF
+    </a>
+</div>
+<div class="ms-1 header-item d-none d-sm-flex">
+                    <a href="{{ route('sms-import.index') }}"
+                        class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600">
+                        Green Cards
+                    </a>
+                </div>
+
 				<div class="ms-1 header-item d-none d-sm-flex">
                     <a href="{{ route('sms.index') }}"
                         class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600">

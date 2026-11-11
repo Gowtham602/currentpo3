@@ -22,7 +22,7 @@
                     <div>
                         <h3 class="mb-1">SMS Excel Import</h3>
                         <p class="text-muted mb-0">
-                            Import records into monthly database tables.
+                          433  Import records into monthly database tables.
                         </p>
                     </div>
                 </div>
@@ -72,10 +72,10 @@
                                 </label>
 
                                 <input type="file" name="excel_file" id="excel_file" class="form-control"
-                                    accept=".xlsx,.xls" required>
+                                    accept=".xlsx,.xls,.csv" required>
 
                                 <small class="text-muted">
-                                    Supported formats: XLSX and XLS. Maximum size: 20 MB.
+                                    Supported formats: CSV XLSX and XLS. Maximum size: 200 MB.
                                 </small>
                             </div>
 
@@ -324,223 +324,171 @@
 
                 {{-- Monthly SMS Summary by Branch --}}
 
-                @if ($selectedMonth && $selectedYear)
-
-                    @if (!$tableExists)
-
-                        <div class="alert alert-warning mt-4">
-                            <strong>No monthly table found!</strong>
-                            No SMS data table exists for
-                            {{ \Carbon\Carbon::create()->month((int) $selectedMonth)->format('F') }}
-                            {{ $selectedYear }}.
-                        </div>
-
-                    @else
-
-                            <div class="card shadow-sm border-0 mt-4">
-                                <div class="card-header bg-white py-3">
-                                    <h5 class="mb-0">Monthly SMS Summary by Branch</h5>
-
-                                    <small class="text-muted">
-                                        {{ \Carbon\Carbon::create()
-                        ->month((int) $selectedMonth)->format('F') }}
-                                        {{ $selectedYear }}
-                                    </small>
-                                </div>
-
-                                <div class="card-body">
+              
+{{-- Monthly SMS Summary by Branch --}}
 
 
-                                    <div class="table-responsive">
-                                        <table class="table table-bordered table-striped table-hover align-middle">
-                                            <thead class="table-light">
-                                                <tr>
-                                                    <th>Branch</th>
-                                                    <!-- <th>Total SMS</th> -->
-                                                    <th>Points Added Count</th>
-                                                    <!-- <th>Total Points Added</th> -->
-                                                    <th>Points Redeemed Count</th>
-                                                    <!-- <th>Total Points Redeemed</th> -->
-                                                    <th>Total Points Redeemed Count</th>
-                                                    <th>OTP Redeem Count</th>
-                                                    <th>OTP Profile Updated Count</th>
-                                                    <th>Total OTP/Upated Count</th>
-                                                    <th>Total Activity Count</th>
-                                                    <!-- <th>Other SMS</th> -->
-                                                </tr>
-                                            </thead>
+@if ($selectedMonth && $selectedYear)
 
-                                            <tbody>
-                                                @if ($tableExists)
+    @if (!$tableExists)
 
-                                                                            <div class="d-flex justify-content-end gap-3 mt-3 mb-3">
-
-                                                                                <a href="{{ route('sms-summary.export.excel', [
-                                                        'month_year' => sprintf('%04d-%02d', $selectedYear, $selectedMonth)
-                                                    ]) }}"
-                                                                                    class="btn btn-success d-inline-flex align-items-center gap-2 px-4 py-2 rounded-3 shadow-sm export-btn">
-
-                                                                                    <i class="fas fa-file-excel fa-lg"></i>
-                                                                                    <span>Download Excel</span>
-                                                                                    <i class="fas fa-download ms-1"></i>
-                                                                                </a>
-
-                                                                                <a href="{{ route('sms-summary.export.pdf', [
-                                                        'month_year' => sprintf('%04d-%02d', $selectedYear, $selectedMonth)
-                                                    ]) }}"
-                                                                                    class="btn btn-danger d-inline-flex align-items-center gap-2 px-4 py-2 rounded-3 shadow-sm export-btn">
-
-                                                                                    <i class="fas fa-file-pdf fa-lg"></i>
-                                                                                    <span>Download PDF</span>
-                                                                                    <i class="fas fa-download ms-1"></i>
-                                                                                </a>
-
-                                                                            </div>
-
-                                                @endif
-                                                @forelse ($summary as $item)
-                                                    <tr>
-                                                        <td>{{ $item->branch ?: 'Unknown' }}</td>
-                                                        <!-- <td>{{ $item->total_sms }}</td> -->
-
-                                                        <td>{{ $item->points_added_count }}</td>
-                                                        <!-- <td>{{ $item->points_added_total }}</td> -->
-
-                                                        <td>{{ $item->points_redeemed_count }}</td>
-                                                        <!-- <td>{{ $item->points_redeemed_total }}</td> -->
-
-                                                        <td>{{ $item->total_points_sms_count }}</td>
-
-                                                        <td>{{ $item->otp_redeem_count }}</td>
-                                                        <td>{{ $item->otp_profile_updated_count }}</td>
-                                                        <td>{{ $item->total_otp_count }}</td>
-
-                                                        <td class="fw-bold">
-                                                            {{ $item->total_activity_count }}
-                                                        </td>
-
-                                                        <!-- <td>{{ $item->other_count }}</td> -->
-                                                    </tr>
-                                                @empty
-                                                    <tr>
-                                                        <td colspan="12" class="text-center text-muted py-4">
-                                                            No SMS records found for this month.
-                                                        </td>
-                                                    </tr>
-                                                @endforelse
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                </div>
-                            </div>
-
-                    @endif
-
-                @endif
-
-
-                {{-- Monthly SMS Records Table --}}
-                <!-- @if ($selectedMonth && $selectedYear)
-
-    <div class="card shadow-sm border-0 mt-4">
-        <div class="card-header bg-white py-3">
-            <h5 class="mb-0">
-                SMS Records -
-                {{ \Carbon\Carbon::create()->month((int) $selectedMonth)->format('F') }}
-                {{ $selectedYear }}
-            </h5>
-
-            @if ($tableExists)
-                <small class="text-muted">
-                    Database table: {{ $table }}
-                </small>
-            @endif
+        <div class="alert alert-warning mt-4">
+            <strong>No monthly table found!</strong>
+            No SMS data table exists for
+            {{ \Carbon\Carbon::create()->month((int) $selectedMonth)->format('F') }}
+            {{ $selectedYear }}.
         </div>
 
-        <div class="card-body">
-            @if (!$tableExists)
+    @else
 
-                <div class="alert alert-warning mb-0">
-                    No monthly table exists for this month and year.
+        <div class="card shadow-sm border-0 mt-4">
+
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0">Monthly SMS Summary by Branch</h5>
+
+                <small class="text-muted">
+                    {{ \Carbon\Carbon::create()
+                        ->month((int) $selectedMonth)->format('F') }}
+                    {{ $selectedYear }}
+                </small>
+            </div>
+
+            <div class="card-body">
+
+                {{-- Export Buttons --}}
+                <div class="d-flex justify-content-end gap-3 mb-3">
+
+                    <a href="{{ route('sms-summary.export.excel', [
+                        'month_year' => sprintf('%04d-%02d', $selectedYear, $selectedMonth)
+                    ]) }}" class="btn btn-success">
+                        <i class="fas fa-file-excel"></i>
+                        Download Excel
+                    </a>
+
+                    <a href="{{ route('sms-summary.export.pdf', [
+                        'month_year' => sprintf('%04d-%02d', $selectedYear, $selectedMonth)
+                    ]) }}" class="btn btn-danger">
+                        <i class="fas fa-file-pdf"></i>
+                        Download PDF
+                    </a>
+
                 </div>
-
-            @elseif ($records->isEmpty())
-
-                <div class="alert alert-info mb-0">
-                    No SMS records found for this month.
-                </div>
-
-            @else
 
                 <div class="table-responsive">
-                    <table class="table table-bordered table-striped
-                                  table-hover align-middle">
+
+                    <table class="table table-bordered table-striped table-hover align-middle">
+
                         <thead class="table-light">
+
                             <tr>
-                                <th>ID</th>
-                                <th>Recipient</th>
-                                <th>Status</th>
-                                <th>Description</th>
-                                <th>Credit Deducted</th>
-                                <th>Sent Time</th>
-                                <th>Sender ID</th>
-                                <th>Track ID</th>
-                                <th>Credit Type</th>
-                                <th>Circle</th>
-                                <th>Message</th>
-                                <th>Message Date</th>
-                                <th>Message Type</th>
-                                <th>Card Number</th>
-                                <th>Points Added</th>
-                                <th>Points Redeemed</th>
-                                <th>Total Points</th>
                                 <th>Branch</th>
-                                <th>SMS Date</th>
+
+                                <th>Points Added Count</th>
+                                <th>Points Redeemed Count</th>
+                                <th>Points Returned Count</th>
+
+                                <th class="table-success">
+                                    Total Points Count
+                                </th>
+
+                                <th>OTP Redeem Count</th>
+                                <th>OTP Profile Updated Count</th>
+
+                                <th class="table-success">
+                                    Total OTP Count
+                                </th>
+
+                                <th class="table-warning">
+                                    Overall Count
+                                </th>
                             </tr>
+
                         </thead>
 
                         <tbody>
-                            @foreach ($records as $record)
+
+                            @forelse ($summary as $item)
+
                                 <tr>
-                                    <td>{{ $record->id }}</td>
-                                    <td>{{ $record->recipient }}</td>
-                                    <td>{{ $record->status }}</td>
-                                    <td>{{ $record->description }}</td>
-                                    <td>{{ $record->credit_deducted }}</td>
-                                    <td>{{ $record->sent_time }}</td>
-                                    <td>{{ $record->sender_id }}</td>
-                                    <td>{{ $record->track_id }}</td>
-                                    <td>{{ $record->credit_type }}</td>
-                                    <td>{{ $record->circle }}</td>
-                                    <td>{{ $record->message }}</td>
-                                    <td>{{ $record->message_date }}</td>
-                                    <td>{{ $record->message_type }}</td>
-                                    <td>{{ $record->card_number }}</td>
-                                    <td>{{ $record->points_added }}</td>
-                                    <td>{{ $record->points_redeemed }}</td>
-                                    <td>{{ $record->total_points }}</td>
-                                    <td>{{ $record->branch }}</td>
-                                    <td>{{ $record->sms_date }}</td>
+
+                                    <td>{{ $item->branch ?? 'Unknown' }}</td>
+
+                                    <td>{{ $item->points_added_count }}</td>
+                                    <td>{{ $item->points_redeemed_count }}</td>
+                                    <td>{{ $item->points_returned_count }}</td>
+
+                                    <td class="fw-bold table-success">
+                                        {{ $item->total_points_count }}
+                                    </td>
+
+                                    <td>{{ $item->otp_redeem_count }}</td>
+                                    <td>{{ $item->otp_profile_updated_count }}</td>
+
+                                    <td class="fw-bold table-success">
+                                        {{ $item->total_otp_count }}
+                                    </td>
+
+                                    <td class="fw-bold table-warning">
+                                        {{ $item->overall_count }}
+                                    </td>
+
                                 </tr>
-                            @endforeach
+
+                            @empty
+
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted py-4">
+                                        No SMS records found for this month.
+                                    </td>
+                                </tr>
+
+                            @endforelse
+
                         </tbody>
+                        <tfoot>
+    <tr class="table-dark fw-bold">
+
+        <td>GRAND TOTAL</td>
+
+        <td>{{ number_format($grandTotal['points_added_count'] ?? 0) }}</td>
+
+        <td>{{ number_format($grandTotal['points_redeemed_count'] ?? 0) }}</td>
+
+        <td>{{ number_format($grandTotal['points_returned_count'] ?? 0) }}</td>
+
+        <td class="table-success text-dark">
+            {{ number_format($grandTotal['total_points_count'] ?? 0) }}
+        </td>
+
+        <td>{{ number_format($grandTotal['otp_redeem_count'] ?? 0) }}</td>
+
+        <td>{{ number_format($grandTotal['otp_profile_updated_count'] ?? 0) }}</td>
+
+        <td class="table-success text-dark">
+            {{ number_format($grandTotal['total_otp_count'] ?? 0) }}
+        </td>
+
+        <td class="table-warning text-dark">
+            {{ number_format($grandTotal['overall_count'] ?? 0) }}
+        </td>
+
+    </tr>
+</tfoot>
+
                     </table>
+
                 </div>
 
-                <div class="mt-3">
-            {{ $records->links('pagination::bootstrap-5') }}
-                </div>
-
-            @endif
+            </div>
         </div>
-    </div>
 
-@endif -->
+    @endif
+
+@endif
 
 
 
-
+ 
 
             </div>
 
