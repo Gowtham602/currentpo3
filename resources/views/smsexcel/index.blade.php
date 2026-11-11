@@ -22,7 +22,7 @@
                     <div>
                         <h3 class="mb-1">SMS Excel Import</h3>
                         <p class="text-muted mb-0">
-                          433  Import records into monthly database tables.
+                            433 Import records into monthly database tables.
                         </p>
                     </div>
                 </div>
@@ -128,57 +128,51 @@
                                 </button>
                             </div>
 
-<div id="uploadNotice" class="mt-4 d-none">
-    <div class="card border-primary shadow-sm">
-        <div class="card-body">
-            <div class="d-flex align-items-center gap-3 mb-3">
-                <div class="spinner-border text-primary"
-                     role="status"
-                     aria-label="Import in progress">
-                </div>
+                            <div id="uploadNotice" class="mt-4 d-none">
+                                <div class="card border-primary shadow-sm">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center gap-3 mb-3">
+                                            <div class="spinner-border text-primary" role="status"
+                                                aria-label="Import in progress">
+                                            </div>
 
-                <div>
-                    <h6 class="mb-1" id="progressTitle">
-                        Preparing Excel import...
-                    </h6>
-                    <small class="text-muted" id="progressMessage">
-                        Please wait while the server processes your file.
-                    </small>
-                </div>
-            </div>
+                                            <div>
+                                                <h6 class="mb-1" id="progressTitle">
+                                                    Preparing Excel import...
+                                                </h6>
+                                                <small class="text-muted" id="progressMessage">
+                                                    Please wait while the server processes your file.
+                                                </small>
+                                            </div>
+                                        </div>
 
-            <div class="progress mb-2"
-                 style="height: 22px;"
-                 role="progressbar"
-                 aria-label="File upload progress"
-                 aria-valuemin="0"
-                 aria-valuemax="100"
-                 aria-valuenow="0"
-                 id="progressContainer">
+                                        <div class="progress mb-2" style="height: 22px;" role="progressbar"
+                                            aria-label="File upload progress" aria-valuemin="0" aria-valuemax="100"
+                                            aria-valuenow="0" id="progressContainer">
 
-                <div id="uploadProgressBar"
-                     class="progress-bar progress-bar-striped progress-bar-animated"
-                     style="width: 0%">
-                    0%
-                </div>
-            </div>
+                                            <div id="uploadProgressBar"
+                                                class="progress-bar progress-bar-striped progress-bar-animated"
+                                                style="width: 0%">
+                                                0%
+                                            </div>
+                                        </div>
 
-            <div class="d-flex justify-content-between flex-wrap gap-2">
-                <small class="text-muted" id="progressPercent">
-                    File upload: 0%
-                </small>
+                                        <div class="d-flex justify-content-between flex-wrap gap-2">
+                                            <small class="text-muted" id="progressPercent">
+                                                File upload: 0%
+                                            </small>
 
-                <small class="text-muted" id="elapsedTime">
-                    Elapsed time: 00:00
-                </small>
-            </div>
+                                            <small class="text-muted" id="elapsedTime">
+                                                Elapsed time: 00:00
+                                            </small>
+                                        </div>
 
-            <div class="alert alert-info mt-3 mb-0">
-                Do not close or refresh this page while importing.
-            </div>
-        </div>
-    </div>
-</div>
+                                        <div class="alert alert-info mt-3 mb-0">
+                                            Do not close or refresh this page while importing.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                         </form>
                     </div>
@@ -257,7 +251,7 @@
 
                                     <div class="table-responsive">
                                         <table class="table table-bordered
-                                                                              table-sm align-middle">
+                                                                                              table-sm align-middle">
                                             <thead class="table-light">
                                                 <tr>
                                                     <th style="width: 100px;">
@@ -283,24 +277,19 @@
                     </div>
                 @endif
 
-
-
-
                 {{-- Monthly SMS Records Filter --}}
-                <div class="card shadow-sm border-0 mt-4">
-                    <div class="card-header bg-white py-3">
-                        <h5 class="mb-0">View Monthly Records</h5>
+                <div class="card border-0 shadow-sm mt-4">
+
+                    <div class="card-header bg-white border-bottom py-3">
+                        <h5 class="mb-0 fw-semibold">Monthly SMS Records</h5>
                     </div>
 
-
                     <div class="card-body">
+
                         <form method="GET" action="{{ route('sms-import.index') }}" class="row g-3 align-items-end">
 
-
-
-
-                            <div class="col-md-6">
-                                <label for="month_year" class="form-label">
+                            <div class="col-md-4">
+                                <label for="month_year" class="form-label fw-medium">
                                     Select Month & Year
                                 </label>
 
@@ -309,186 +298,175 @@
                                     value="{{ request('month_year', now()->format('Y-m')) }}" required readonly>
                             </div>
 
-
-
-                            <div class="col-md-3">
-                                <button type="submit" class="btn btn-primary">
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary px-4">
                                     Show Records
                                 </button>
                             </div>
 
                         </form>
+
                     </div>
-
                 </div>
 
-                {{-- Monthly SMS Summary by Branch --}}
 
-              
-{{-- Monthly SMS Summary by Branch --}}
+                @if ($selectedMonth && $selectedYear)
 
+                    @if (!$tableExists)
 
-@if ($selectedMonth && $selectedYear)
+                        <div class="alert alert-warning mt-4">
+                            <strong>No monthly table found!</strong>
+                            No SMS data available for
+                            {{ \Carbon\Carbon::create()->month((int) $selectedMonth)->format('F') }}
+                            {{ $selectedYear }}.
+                        </div>
 
-    @if (!$tableExists)
+                    @else
 
-        <div class="alert alert-warning mt-4">
-            <strong>No monthly table found!</strong>
-            No SMS data table exists for
-            {{ \Carbon\Carbon::create()->month((int) $selectedMonth)->format('F') }}
-            {{ $selectedYear }}.
-        </div>
+                                {{-- Monthly Summary --}}
+                                <div class="card border-0 shadow-sm mt-4">
 
-    @else
+                                    <div class="card-header bg-white py-3">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
 
-        <div class="card shadow-sm border-0 mt-4">
+                                            <div>
+                                                <h5 class="mb-1 fw-semibold">
+                                                    SMS Summary by Branch
+                                                </h5>
 
-            <div class="card-header bg-white py-3">
-                <h5 class="mb-0">Monthly SMS Summary by Branch</h5>
+                                                <small class="text-muted">
+                                                    {{ \Carbon\Carbon::create()
+                            ->month((int) $selectedMonth)
+                            ->format('F') }}
+                                                    {{ $selectedYear }}
+                                                </small>
+                                            </div>
 
-                <small class="text-muted">
-                    {{ \Carbon\Carbon::create()
-                        ->month((int) $selectedMonth)->format('F') }}
-                    {{ $selectedYear }}
-                </small>
-            </div>
+                                            <div class="d-flex gap-2">
 
-            <div class="card-body">
+                                                <a href="{{ route('sms-summary.export.excel', [
+                            'month_year' => sprintf('%04d-%02d', $selectedYear, $selectedMonth)
+                        ]) }}" class="btn btn-sm btn-outline-success">
+                                                    <i class="fas fa-file-excel me-1"></i>
+                                                    Excel
+                                                </a>
 
-                {{-- Export Buttons --}}
-                <div class="d-flex justify-content-end gap-3 mb-3">
+                                                <a href="{{ route('sms-summary.export.pdf', [
+                            'month_year' => sprintf('%04d-%02d', $selectedYear, $selectedMonth)
+                        ]) }}" class="btn btn-sm btn-outline-danger">
+                                                    <i class="fas fa-file-pdf me-1"></i>
+                                                    PDF
+                                                </a>
 
-                    <a href="{{ route('sms-summary.export.excel', [
-                        'month_year' => sprintf('%04d-%02d', $selectedYear, $selectedMonth)
-                    ]) }}" class="btn btn-success">
-                        <i class="fas fa-file-excel"></i>
-                        Download Excel
-                    </a>
+                                            </div>
 
-                    <a href="{{ route('sms-summary.export.pdf', [
-                        'month_year' => sprintf('%04d-%02d', $selectedYear, $selectedMonth)
-                    ]) }}" class="btn btn-danger">
-                        <i class="fas fa-file-pdf"></i>
-                        Download PDF
-                    </a>
+                                        </div>
+                                    </div>
 
-                </div>
+                                    <div class="card-body p-0">
 
-                <div class="table-responsive">
+                                        <div class="table-responsive">
 
-                    <table class="table table-bordered table-striped table-hover align-middle">
+                                            <table class="table table-bordered table-hover align-middle mb-0">
 
-                        <thead class="table-light">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th width="60">S.No</th>
+                                                        <th>Branch</th>
+                                                        <th>Points Added</th>
+                                                        <th>Points Redeemed</th>
+                                                        <th>Points Returned</th>
+                                                        <th class="text-success">Total Points</th>
+                                                        <th>OTP Redeem</th>
+                                                        <th>OTP Profile Updated</th>
+                                                        <th class="text-success">Total OTP</th>
+                                                        <th class="text-primary">Overall Count</th>
+                                                    </tr>
+                                                </thead>
 
-                            <tr>
-                                <th>Branch</th>
+                                                <tbody>
 
-                                <th>Points Added Count</th>
-                                <th>Points Redeemed Count</th>
-                                <th>Points Returned Count</th>
+                                                    @forelse ($summary as $item)
 
-                                <th class="table-success">
-                                    Total Points Count
-                                </th>
+                                                        <tr>
+                                                            <td>{{ $loop->iteration }}</td>
+                                                            <td class="fw-semibold">
+                                                                {{ $item->branch ?? 'Unknown' }}
+                                                            </td>
 
-                                <th>OTP Redeem Count</th>
-                                <th>OTP Profile Updated Count</th>
+                                                            <td>{{ number_format($item->points_added_count) }}</td>
+                                                            <td>{{ number_format($item->points_redeemed_count) }}</td>
+                                                            <td>{{ number_format($item->points_returned_count) }}</td>
 
-                                <th class="table-success">
-                                    Total OTP Count
-                                </th>
+                                                            <td class="fw-semibold text-success">
+                                                                {{ number_format($item->total_points_count) }}
+                                                            </td>
 
-                                <th class="table-warning">
-                                    Overall Count
-                                </th>
-                            </tr>
+                                                            <td>{{ number_format($item->otp_redeem_count) }}</td>
+                                                            <td>{{ number_format($item->otp_profile_updated_count) }}</td>
 
-                        </thead>
+                                                            <td class="fw-semibold text-success">
+                                                                {{ number_format($item->total_otp_count) }}
+                                                            </td>
 
-                        <tbody>
+                                                            <td class="fw-semibold text-primary">
+                                                                {{ number_format($item->overall_count) }}
+                                                            </td>
+                                                        </tr>
 
-                            @forelse ($summary as $item)
+                                                    @empty
 
-                                <tr>
+                                                        <tr>
+                                                            <td colspan="9" class="text-center text-muted py-4">
+                                                                No SMS records found for this month.
+                                                            </td>
+                                                        </tr>
 
-                                    <td>{{ $item->branch ?? 'Unknown' }}</td>
+                                                    @endforelse
 
-                                    <td>{{ $item->points_added_count }}</td>
-                                    <td>{{ $item->points_redeemed_count }}</td>
-                                    <td>{{ $item->points_returned_count }}</td>
+                                                </tbody>
 
-                                    <td class="fw-bold table-success">
-                                        {{ $item->total_points_count }}
-                                    </td>
+                                                @if ($summary->isNotEmpty())
 
-                                    <td>{{ $item->otp_redeem_count }}</td>
-                                    <td>{{ $item->otp_profile_updated_count }}</td>
+                                                    <tfoot>
+                                                        <tr class="table-primary fw-bold">
+                                                            <td></td>
+                                                            <td>GRAND TOTAL</td>
 
-                                    <td class="fw-bold table-success">
-                                        {{ $item->total_otp_count }}
-                                    </td>
+                                                            <td>{{ number_format($grandTotal['points_added_count'] ?? 0) }}</td>
+                                                            <td>{{ number_format($grandTotal['points_redeemed_count'] ?? 0) }}</td>
+                                                            <td>{{ number_format($grandTotal['points_returned_count'] ?? 0) }}</td>
 
-                                    <td class="fw-bold table-warning">
-                                        {{ $item->overall_count }}
-                                    </td>
+                                                            <td>{{ number_format($grandTotal['total_points_count'] ?? 0) }}</td>
 
-                                </tr>
+                                                            <td>{{ number_format($grandTotal['otp_redeem_count'] ?? 0) }}</td>
+                                                            <td>{{ number_format($grandTotal['otp_profile_updated_count'] ?? 0) }}</td>
 
-                            @empty
+                                                            <td>{{ number_format($grandTotal['total_otp_count'] ?? 0) }}</td>
 
-                                <tr>
-                                    <td colspan="9" class="text-center text-muted py-4">
-                                        No SMS records found for this month.
-                                    </td>
-                                </tr>
+                                                            <td>{{ number_format($grandTotal['overall_count'] ?? 0) }}</td>
 
-                            @endforelse
+                                                        </tr>
+                                                    </tfoot>
 
-                        </tbody>
-                        <tfoot>
-    <tr class="table-dark fw-bold">
+                                                @endif
 
-        <td>GRAND TOTAL</td>
+                                            </table>
 
-        <td>{{ number_format($grandTotal['points_added_count'] ?? 0) }}</td>
+                                        </div>
 
-        <td>{{ number_format($grandTotal['points_redeemed_count'] ?? 0) }}</td>
+                                    </div>
 
-        <td>{{ number_format($grandTotal['points_returned_count'] ?? 0) }}</td>
+                                </div>
 
-        <td class="table-success text-dark">
-            {{ number_format($grandTotal['total_points_count'] ?? 0) }}
-        </td>
+                    @endif
 
-        <td>{{ number_format($grandTotal['otp_redeem_count'] ?? 0) }}</td>
-
-        <td>{{ number_format($grandTotal['otp_profile_updated_count'] ?? 0) }}</td>
-
-        <td class="table-success text-dark">
-            {{ number_format($grandTotal['total_otp_count'] ?? 0) }}
-        </td>
-
-        <td class="table-warning text-dark">
-            {{ number_format($grandTotal['overall_count'] ?? 0) }}
-        </td>
-
-    </tr>
-</tfoot>
-
-                    </table>
-
-                </div>
-
-            </div>
-        </div>
-
-    @endif
-
-@endif
+                @endif
 
 
 
- 
+
+
 
             </div>
 
@@ -496,236 +474,236 @@
 
     </div>
 
-    
 
 
 
-<script>
 
-    
-(function () {
-    function initializeExcelUpload() {
-        const form = document.getElementById('smsImportForm');
+    <script>
 
-        if (!form) return;
 
-        const fileInput = document.getElementById('excel_file');
-        const uploadButton = document.getElementById('uploadButton');
-        const buttonText = document.getElementById('buttonText');
-        const notice = document.getElementById('uploadNotice');
-        const progressBar = document.getElementById('uploadProgressBar');
-        const progressTitle = document.getElementById('progressTitle');
-        const progressMessage = document.getElementById('progressMessage');
-        const progressPercent = document.getElementById('progressPercent');
-        const elapsedTime = document.getElementById('elapsedTime');
-        const progressContainer = document.getElementById('progressContainer');
+        (function () {
+            function initializeExcelUpload() {
+                const form = document.getElementById('smsImportForm');
 
-        let requestRunning = false;
-        let timerInterval = null;
-        let startTime = 0;
+                if (!form) return;
 
-        form.addEventListener('submit', function (event) {
-            event.preventDefault();
+                const fileInput = document.getElementById('excel_file');
+                const uploadButton = document.getElementById('uploadButton');
+                const buttonText = document.getElementById('buttonText');
+                const notice = document.getElementById('uploadNotice');
+                const progressBar = document.getElementById('uploadProgressBar');
+                const progressTitle = document.getElementById('progressTitle');
+                const progressMessage = document.getElementById('progressMessage');
+                const progressPercent = document.getElementById('progressPercent');
+                const elapsedTime = document.getElementById('elapsedTime');
+                const progressContainer = document.getElementById('progressContainer');
 
-            if (requestRunning) return;
+                let requestRunning = false;
+                let timerInterval = null;
+                let startTime = 0;
 
-            if (!form.checkValidity()) {
-                form.reportValidity();
-                return;
-            }
+                form.addEventListener('submit', function (event) {
+                    event.preventDefault();
 
-            if (!fileInput.files || !fileInput.files.length) {
-                alert('Please select an Excel file.');
-                return;
-            }
+                    if (requestRunning) return;
 
-            requestRunning = true;
-            startTime = Date.now();
+                    if (!form.checkValidity()) {
+                        form.reportValidity();
+                        return;
+                    }
 
-            // SHOW LOADING IMMEDIATELY
-            notice.classList.remove('d-none');
-            notice.style.display = 'block';
-            notice.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center'
-            });
+                    if (!fileInput.files || !fileInput.files.length) {
+                        alert('Please select an Excel file.');
+                        return;
+                    }
 
-            uploadButton.disabled = true;
-            buttonText.textContent = 'Uploading...';
+                    requestRunning = true;
+                    startTime = Date.now();
 
-            progressTitle.textContent = 'Uploading Excel file...';
-            progressMessage.textContent =
-                'Please wait while your Excel file is being uploaded.';
+                    // SHOW LOADING IMMEDIATELY
+                    notice.classList.remove('d-none');
+                    notice.style.display = 'block';
+                    notice.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
 
-            progressBar.className =
-                'progress-bar progress-bar-striped progress-bar-animated';
+                    uploadButton.disabled = true;
+                    buttonText.textContent = 'Uploading...';
 
-            progressBar.style.width = '0%';
-            progressBar.textContent = '0%';
-
-            progressContainer.setAttribute('aria-valuenow', '0');
-            progressPercent.textContent = 'File upload: 0%';
-
-            elapsedTime.textContent = 'Elapsed time: 00:00';
-
-            timerInterval = setInterval(function () {
-                const seconds = Math.floor(
-                    (Date.now() - startTime) / 1000
-                );
-
-                const minutes = Math.floor(seconds / 60);
-                const remaining = seconds % 60;
-
-                elapsedTime.textContent =
-                    'Elapsed time: ' +
-                    String(minutes).padStart(2, '0') + ':' +
-                    String(remaining).padStart(2, '0');
-            }, 1000);
-
-            const xhr = new XMLHttpRequest();
-            const formData = new FormData(form);
-
-            xhr.open('POST', form.action, true);
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            xhr.setRequestHeader('Accept', 'text/html');
-
-            // Actual file transfer percentage
-            xhr.upload.addEventListener('progress', function (e) {
-                if (!e.lengthComputable) return;
-
-                const percent = Math.round(
-                    (e.loaded / e.total) * 100
-                );
-
-                progressBar.style.width = percent + '%';
-                progressBar.textContent = percent + '%';
-
-                progressContainer.setAttribute(
-                    'aria-valuenow',
-                    String(percent)
-                );
-
-                progressPercent.textContent =
-                    'File upload: ' + percent + '%';
-
-                if (percent >= 100) {
-                    progressTitle.textContent =
-                        'Processing Excel records...';
-
+                    progressTitle.textContent = 'Uploading Excel file...';
                     progressMessage.textContent =
-                        'Upload complete. Saving records to the database. ' +
-                        'Large files may take several minutes.';
+                        'Please wait while your Excel file is being uploaded.';
 
-                    buttonText.textContent = 'Importing...';
+                    progressBar.className =
+                        'progress-bar progress-bar-striped progress-bar-animated';
 
-                    // Indeterminate processing animation
-                    progressBar.textContent = 'Processing...';
-                    progressBar.style.width = '100%';
+                    progressBar.style.width = '0%';
+                    progressBar.textContent = '0%';
 
-                    progressPercent.textContent =
-                        'File uploaded — waiting for import to finish';
-                }
-            });
+                    progressContainer.setAttribute('aria-valuenow', '0');
+                    progressPercent.textContent = 'File upload: 0%';
 
-            
-xhr.addEventListener('load', function () {
-    clearInterval(timerInterval);
+                    elapsedTime.textContent = 'Elapsed time: 00:00';
 
-    if (xhr.status >= 200 && xhr.status < 300) {
-        progressTitle.textContent = 'Import response received';
-        progressMessage.textContent =
-            'Displaying the saved records and import results...';
+                    timerInterval = setInterval(function () {
+                        const seconds = Math.floor(
+                            (Date.now() - startTime) / 1000
+                        );
 
-        progressBar.className = 'progress-bar bg-success';
-        progressBar.style.width = '100%';
-        progressBar.textContent = 'Complete';
+                        const minutes = Math.floor(seconds / 60);
+                        const remaining = seconds % 60;
 
-        progressContainer.setAttribute('aria-valuenow', '100');
-        progressPercent.textContent = 'Import request completed';
+                        elapsedTime.textContent =
+                            'Elapsed time: ' +
+                            String(minutes).padStart(2, '0') + ':' +
+                            String(remaining).padStart(2, '0');
+                    }, 1000);
 
-        /*
-         * Laravel may have redirected back to the import page.
-         * xhr.responseText contains that page, including flashed
-         * import results and validation errors.
-         *
-         * Do not reload again: that could consume the flash
-         * message before the user sees it.
-         */
-        if (xhr.responseURL &&
-            new URL(xhr.responseURL).origin !== window.location.origin) {
-            showError(
-                'Unexpected response',
-                'The server redirected to another website. Please check authentication.'
-            );
-            return;
-        }
+                    const xhr = new XMLHttpRequest();
+                    const formData = new FormData(form);
 
-        if (!xhr.responseText || !xhr.responseText.trim()) {
-            showError(
-                'Empty server response',
-                'The server returned no page content. Check your Laravel controller.'
-            );
-            return;
-        }
+                    xhr.open('POST', form.action, true);
+                    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                    xhr.setRequestHeader('Accept', 'text/html');
 
-        document.open();
-        document.write(xhr.responseText);
-        document.close();
+                    // Actual file transfer percentage
+                    xhr.upload.addEventListener('progress', function (e) {
+                        if (!e.lengthComputable) return;
 
-    } else {
-        showError(
-            'Import failed',
-            'HTTP ' + xhr.status +
-            '. Check the Laravel validation errors and storage/logs/laravel.log.'
-        );
-    }
-});
+                        const percent = Math.round(
+                            (e.loaded / e.total) * 100
+                        );
+
+                        progressBar.style.width = percent + '%';
+                        progressBar.textContent = percent + '%';
+
+                        progressContainer.setAttribute(
+                            'aria-valuenow',
+                            String(percent)
+                        );
+
+                        progressPercent.textContent =
+                            'File upload: ' + percent + '%';
+
+                        if (percent >= 100) {
+                            progressTitle.textContent =
+                                'Processing Excel records...';
+
+                            progressMessage.textContent =
+                                'Upload complete. Saving records to the database. ' +
+                                'Large files may take several minutes.';
+
+                            buttonText.textContent = 'Importing...';
+
+                            // Indeterminate processing animation
+                            progressBar.textContent = 'Processing...';
+                            progressBar.style.width = '100%';
+
+                            progressPercent.textContent =
+                                'File uploaded — waiting for import to finish';
+                        }
+                    });
 
 
-            xhr.addEventListener('error', function () {
-                clearInterval(timerInterval);
+                    xhr.addEventListener('load', function () {
+                        clearInterval(timerInterval);
 
-                showError(
-                    'Network error',
-                    'Unable to communicate with the server. ' +
-                    'Please check your connection.'
-                );
-            });
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            progressTitle.textContent = 'Import response received';
+                            progressMessage.textContent =
+                                'Displaying the saved records and import results...';
 
-            xhr.addEventListener('abort', function () {
-                clearInterval(timerInterval);
-                showError('Upload cancelled', 'The request was cancelled.');
-            });
+                            progressBar.className = 'progress-bar bg-success';
+                            progressBar.style.width = '100%';
+                            progressBar.textContent = 'Complete';
 
-            function showError(title, message) {
-                requestRunning = false;
+                            progressContainer.setAttribute('aria-valuenow', '100');
+                            progressPercent.textContent = 'Import request completed';
 
-                uploadButton.disabled = false;
-                buttonText.textContent = 'Import Excel';
+                            /*
+                             * Laravel may have redirected back to the import page.
+                             * xhr.responseText contains that page, including flashed
+                             * import results and validation errors.
+                             *
+                             * Do not reload again: that could consume the flash
+                             * message before the user sees it.
+                             */
+                            if (xhr.responseURL &&
+                                new URL(xhr.responseURL).origin !== window.location.origin) {
+                                showError(
+                                    'Unexpected response',
+                                    'The server redirected to another website. Please check authentication.'
+                                );
+                                return;
+                            }
 
-                progressTitle.textContent = title;
-                progressMessage.textContent = message;
+                            if (!xhr.responseText || !xhr.responseText.trim()) {
+                                showError(
+                                    'Empty server response',
+                                    'The server returned no page content. Check your Laravel controller.'
+                                );
+                                return;
+                            }
 
-                progressBar.className = 'progress-bar bg-danger';
-                progressBar.textContent = 'Failed';
+                            document.open();
+                            document.write(xhr.responseText);
+                            document.close();
 
-                progressPercent.textContent = 'Import unsuccessful';
+                        } else {
+                            showError(
+                                'Import failed',
+                                'HTTP ' + xhr.status +
+                                '. Check the Laravel validation errors and storage/logs/laravel.log.'
+                            );
+                        }
+                    });
+
+
+                    xhr.addEventListener('error', function () {
+                        clearInterval(timerInterval);
+
+                        showError(
+                            'Network error',
+                            'Unable to communicate with the server. ' +
+                            'Please check your connection.'
+                        );
+                    });
+
+                    xhr.addEventListener('abort', function () {
+                        clearInterval(timerInterval);
+                        showError('Upload cancelled', 'The request was cancelled.');
+                    });
+
+                    function showError(title, message) {
+                        requestRunning = false;
+
+                        uploadButton.disabled = false;
+                        buttonText.textContent = 'Import Excel';
+
+                        progressTitle.textContent = title;
+                        progressMessage.textContent = message;
+
+                        progressBar.className = 'progress-bar bg-danger';
+                        progressBar.textContent = 'Failed';
+
+                        progressPercent.textContent = 'Import unsuccessful';
+                    }
+
+                    xhr.send(formData);
+                });
             }
 
-            xhr.send(formData);
-        });
-    }
-
-    // Works whether the DOM is still loading or already ready.
-    if (document.readyState === 'loading') {
-        document.addEventListener(
-            'DOMContentLoaded',
-            initializeExcelUpload
-        );
-    } else {
-        initializeExcelUpload();
-    }
-})();
+            // Works whether the DOM is still loading or already ready.
+            if (document.readyState === 'loading') {
+                document.addEventListener(
+                    'DOMContentLoaded',
+                    initializeExcelUpload
+                );
+            } else {
+                initializeExcelUpload();
+            }
+        })();
 
 
         document.addEventListener('DOMContentLoaded', function () {
