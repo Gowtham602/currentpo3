@@ -79,7 +79,12 @@ public function index(Request $request)
 
         // Branch-wise summary
         $summary = DB::table($table)
-            ->select('branch')
+            ->selectRaw("
+    CASE
+        WHEN branch IN ('SAT', 'BLS') THEN 'BLS'
+        ELSE branch
+    END AS branch
+")
 
             // Points Added
             ->selectRaw("
@@ -158,9 +163,14 @@ public function index(Request $request)
                 ) AS overall_count
             ")
 
-            ->groupBy('branch')
-            ->orderBy('branch')
-            ->get();
+          ->groupByRaw("
+    CASE
+        WHEN branch IN ('SAT', 'BLS') THEN 'BLS'
+        ELSE branch
+    END
+")
+->orderBy('branch')
+->get();
     }
     // Grand Total - All Branches
 $grandTotal = [
@@ -818,8 +828,12 @@ private function getExportData(Request $request): array
     );
 
     $summary = DB::table($table)
-        ->select('branch')
-
+        ->selectRaw("
+    CASE
+        WHEN branch IN ('SAT', 'BLS') THEN 'BLS'
+        ELSE branch
+    END AS branch
+")
         ->selectRaw("
             SUM(CASE WHEN message_type = 'points_added'
             THEN 1 ELSE 0 END) AS points_added_count
@@ -870,9 +884,14 @@ private function getExportData(Request $request): array
             ) THEN 1 ELSE 0 END) AS overall_count
         ")
 
-        ->groupBy('branch')
-        ->orderBy('branch')
-        ->get();
+        ->groupByRaw("
+    CASE
+        WHEN branch IN ('SAT', 'BLS') THEN 'BLS'
+        ELSE branch
+    END
+")
+->orderBy('branch')
+->get();
 
     return [
         'table' => $table,
@@ -883,18 +902,21 @@ private function getExportData(Request $request): array
 
 
    
+
 public function exportExcel(Request $request)
 {
     $data = $this->getExportData($request);
 
-    $spreadsheet = new Spreadsheet();
+    $summary = $data['summary'];
 
+    $spreadsheet = new Spreadsheet();
     $sheet = $spreadsheet->getActiveSheet();
 
     $sheet->setTitle('Monthly SMS Summary');
 
-    // Excel headings
+    // Headers
     $sheet->fromArray([[
+        'S.No',
         'Branch',
         'Points Added Count',
         'Points Redeemed Count',
@@ -906,50 +928,95 @@ public function exportExcel(Request $request)
         'Overall Count',
     ]], null, 'A1');
 
-    // Insert branch-wise records
+    // Branch-wise records
     $row = 2;
+    $serialNo = 1;
 
-    foreach ($data['summary'] as $item) {
+    foreach ($summary as $item) {
 
         $sheet->fromArray([[
-    $item->branch,
-    (int) $item->points_added_count,
-    (int) $item->points_redeemed_count,
-    (int) $item->points_returned_count,
-    (int) $item->total_points_count,
-    (int) $item->otp_redeem_count,
-    (int) $item->otp_profile_updated_count,
-    (int) $item->total_otp_count,
-    (int) $item->overall_count,
-]], null, "A{$row}", true);
+            $serialNo,
+            $item->branch,
+            (int) $item->points_added_count,
+            (int) $item->points_redeemed_count,
+            (int) $item->points_returned_count,
+            (int) $item->total_points_count,
+            (int) $item->otp_redeem_count,
+            (int) $item->otp_profile_updated_count,
+            (int) $item->total_otp_count,
+            (int) $item->overall_count,
+        ]], null, "A{$row}", true);
 
+        $serialNo++;
         $row++;
     }
 
-    // Header formatting
-    $sheet->getStyle('A1:I1')->getFont()->setBold(true);
+    // Calculate Grand Total
+    $grandTotal = [
+        $summary->sum('points_added_count'),
+        $summary->sum('points_redeemed_count'),
+        $summary->sum('points_returned_count'),
+        $summary->sum('total_points_count'),
+        $summary->sum('otp_redeem_count'),
+        $summary->sum('otp_profile_updated_count'),
+        $summary->sum('total_otp_count'),
+        $summary->sum('overall_count'),
+    ];
 
-    $sheet->getStyle('A1:I1')->getAlignment()
+    // Grand Total Row
+    $sheet->fromArray([[
+        '',
+        'GRAND TOTAL',
+        ...$grandTotal,
+    ]], null, "A{$row}", true);
+
+    // Header styling
+    $sheet->getStyle('A1:J1')->getFont()->setBold(true);
+
+    $sheet->getStyle('A1:J1')->getAlignment()
         ->setHorizontal(
             \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
         );
 
-    // Highlight calculated total columns
+    $sheet->getStyle('A1:J1')->getFill()
+        ->setFillType(
+            \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID
+        )
+        ->getStartColor()->setARGB('FFE9ECEF');
+
+    // Grand Total styling
+    $sheet->getStyle("A{$row}:J{$row}")->getFont()->setBold(true);
+
+    $sheet->getStyle("A{$row}:J{$row}")->getFill()
+        ->setFillType(
+            \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID
+        )
+        ->getStartColor()->setARGB('FFD9E1F2');
+
+    // Highlight calculated columns
     if ($row > 2) {
-        $sheet->getStyle("E2:E" . ($row - 1))
-            ->getFont()->setBold(true);
-
-        $sheet->getStyle("H2:H" . ($row - 1))
-            ->getFont()->setBold(true);
-
-        $sheet->getStyle("I2:I" . ($row - 1))
-            ->getFont()->setBold(true);
+        foreach (['F', 'I', 'J'] as $column) {
+            $sheet->getStyle("{$column}2:{$column}" . ($row - 1))
+                ->getFont()->setBold(true);
+        }
     }
 
+    // Number formatting
+    $sheet->getStyle("C2:J{$row}")
+        ->getNumberFormat()
+        ->setFormatCode('#,##0');
+
+    // Borders
+    $sheet->getStyle("A1:J{$row}")
+        ->getBorders()
+        ->getAllBorders()
+        ->setBorderStyle(
+            \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN
+        );
+
     // Auto column width
-    foreach (range('A', 'I') as $column) {
-        $sheet->getColumnDimension($column)
-            ->setAutoSize(true);
+    foreach (range('A', 'J') as $column) {
+        $sheet->getColumnDimension($column)->setAutoSize(true);
     }
 
     // Freeze header
@@ -959,11 +1026,8 @@ public function exportExcel(Request $request)
 
     return response()->streamDownload(
         function () use ($spreadsheet) {
-
             $writer = new Xlsx($spreadsheet);
-
             $writer->save('php://output');
-
             $spreadsheet->disconnectWorksheets();
         },
         $filename,
@@ -973,6 +1037,7 @@ public function exportExcel(Request $request)
         ]
     );
 }
+
 
 
     public function exportPdf(Request $request)

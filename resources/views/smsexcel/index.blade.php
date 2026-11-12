@@ -351,12 +351,12 @@
                                                     Excel
                                                 </a>
 
-                                                <a href="{{ route('sms-summary.export.pdf', [
+                                                <!-- <a href="{{ route('sms-summary.export.pdf', [
                             'month_year' => sprintf('%04d-%02d', $selectedYear, $selectedMonth)
                         ]) }}" class="btn btn-sm btn-outline-danger">
                                                     <i class="fas fa-file-pdf me-1"></i>
                                                     PDF
-                                                </a>
+                                                </a> -->
 
                                             </div>
 
