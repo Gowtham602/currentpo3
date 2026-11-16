@@ -17,15 +17,32 @@
         <div class="page-content">
             <div class="container-fluid py-4">
 
-                <div class="d-flex flex-wrap justify-content-between
-                            align-items-center mb-4">
-                    <div>
-                        <h3 class="mb-1">SMS Excel Import</h3>
-                        <p class="text-muted mb-0">
-                            433 Import records into monthly database tables.
-                        </p>
-                    </div>
-                </div>
+                
+<div class="d-flex flex-wrap justify-content-between
+            align-items-center gap-3 mb-4">
+
+    {{-- Page Title --}}
+    <div>
+        <h3 class="mb-1">SMS Excel Import</h3>
+
+        <p class="text-muted mb-0">
+            433 Import records into monthly database tables.
+        </p>
+    </div>
+
+    {{-- Recipient Report Button --}}
+    <div>
+        <a href="{{ route('sms-recipient-report.index') }}"
+           class="btn btn-outline-primary px-4 py-2">
+
+            <i class="fas fa-address-book me-2"></i>
+            Report Need
+
+        </a>
+    </div>
+
+</div>
+
 
                 @if ($errors->any())
                     <div class="alert alert-danger">
@@ -201,6 +218,7 @@
                                         </h3>
                                     </div>
                                 </div>
+                                
 
                                 {{-- Rows Inserted --}}
                                 <div class="col-md-4 col-lg">
@@ -251,7 +269,7 @@
 
                                     <div class="table-responsive">
                                         <table class="table table-bordered
-                                                                                              table-sm align-middle">
+                                                                                                      table-sm align-middle">
                                             <thead class="table-light">
                                                 <tr>
                                                     <th style="width: 100px;">
@@ -352,11 +370,11 @@
                                                 </a>
 
                                                 <!-- <a href="{{ route('sms-summary.export.pdf', [
-                            'month_year' => sprintf('%04d-%02d', $selectedYear, $selectedMonth)
-                        ]) }}" class="btn btn-sm btn-outline-danger">
-                                                    <i class="fas fa-file-pdf me-1"></i>
-                                                    PDF
-                                                </a> -->
+                                            'month_year' => sprintf('%04d-%02d', $selectedYear, $selectedMonth)
+                                        ]) }}" class="btn btn-sm btn-outline-danger">
+                                                                    <i class="fas fa-file-pdf me-1"></i>
+                                                                    PDF
+                                                                </a> -->
 
                                             </div>
 

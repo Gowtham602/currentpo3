@@ -18,6 +18,7 @@ use Carbon\Carbon;
 use Throwable;
 use App\Support\SmsTableHelper;
 use App\Support\SmsMessageParser;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 
 class SmsExcelImportController extends Controller
 {
@@ -26,6 +27,7 @@ class SmsExcelImportController extends Controller
 
 
 private array $requiredHeaders = [
+       'Recipient',
     'Status',
     'Description',
     'Sent Time',
@@ -33,6 +35,20 @@ private array $requiredHeaders = [
     'Circle',
     'Message',
 ];
+private function normalizeRecipient($value): ?string
+{
+    if ($value === null || $value === '') {
+        return null;
+    }
+
+    // Excel may return a phone number as a float.
+    if (is_numeric($value)) {
+        return sprintf('%.0f', (float) $value);
+    }
+
+    return trim((string) $value);
+}
+
 
 
   
@@ -486,9 +502,14 @@ if (!isset($preparedTables[$table])) {
 
     $preparedTables[$table] = true;
 }
-
+// Get and normalize recipient phone number.
+$recipient = $this->normalizeRecipient(
+    $getValue('Recipient')
+);
 // Save only the required columns.
 $data = [
+    
+   'recipient' => $recipient,
     'status' => $getValue('Status'),
 
     'description' => $getValue('Description'),
@@ -767,6 +788,7 @@ private function saveBatch(string $table, array $batch): array
             $batch,
             ['track_id', 'sent_time'],
             [
+                'recipient',  
                 'status',
                 'description',
                 'circle',
@@ -1053,4 +1075,268 @@ public function exportExcel(Request $request)
             'sms-summary-' . $data['table'] . '.pdf'
         );
     }
+
+
+/**
+ * Available branch codes for recipient reports.
+ */
+private const RECIPIENT_BRANCHES = [
+    'BLR', 'BLS', 'CBE', 'CCR', 'CHN',
+    'CHR', 'GNC', 'HYR', 'KAC', 'KOC',
+    'MDU', 'NGL', 'PDI', 'PDY', 'SLM',
+    'SPR', 'TRY', 'TVL', 'TVM', 'VEL',
+];
+
+
+/**
+ * Display SMS recipient report.
+ */
+public function recipientReport(Request $request)
+{
+    $branch = strtoupper(trim((string) $request->input('branch', '')));
+
+    $request->merge(['branch' => $branch]);
+
+    $request->validate([
+        'month_year' => [
+            'nullable',
+            'date_format:Y-m',
+            'after_or_equal:2026-01',
+            'before_or_equal:2030-12',
+        ],
+        'branch' => [
+            'nullable',
+            'in:' . implode(',', self::RECIPIENT_BRANCHES),
+        ],
+    ]);
+
+    $monthYear = $request->input(
+        'month_year',
+        now()->format('Y-m')
+    );
+
+    $date = Carbon::createFromFormat('!Y-m', $monthYear);
+
+    $table = SmsTableHelper::getTableName(
+        $date->format('Y-m-d')
+    );
+
+    $branches = self::RECIPIENT_BRANCHES;
+
+    $tableExists = Schema::hasTable($table);
+
+    $schemaReady = $tableExists
+        && Schema::hasColumn($table, 'branch')
+        && Schema::hasColumn($table, 'recipient');
+
+    $selectedBranch = $branch;
+
+    $recipients = collect();
+
+    if ($selectedBranch !== '' && $schemaReady) {
+
+        $recipients = DB::table($table)
+            ->whereRaw(
+                'UPPER(TRIM(branch)) = ?',
+                [$selectedBranch]
+            )
+            ->whereNotNull('recipient')
+            ->whereRaw("TRIM(recipient) != ''")
+            ->selectRaw('TRIM(recipient) AS recipient')
+            ->groupByRaw('TRIM(recipient)')
+            ->orderBy('recipient')
+            ->get();
+    }
+
+    return view('smsexcel.recipient-report', compact(
+        'monthYear',
+        'table',
+        'branches',
+        'tableExists',
+        'schemaReady',
+        'selectedBranch',
+        'recipients'
+    ));
 }
+
+
+/**
+ * Get common filtered recipient data.
+ * Used by Excel and PDF exports.
+ */
+private function getRecipientReportData(Request $request): array
+{
+    $branch = strtoupper(trim((string) $request->input('branch', '')));
+
+    $request->merge(['branch' => $branch]);
+
+    $request->validate([
+        'month_year' => [
+            'required',
+            'date_format:Y-m',
+            'after_or_equal:2026-01',
+            'before_or_equal:2030-12',
+        ],
+        'branch' => [
+            'required',
+            'in:' . implode(',', self::RECIPIENT_BRANCHES),
+        ],
+    ]);
+
+    $date = Carbon::createFromFormat(
+        '!Y-m',
+        $request->input('month_year')
+    );
+
+    $table = SmsTableHelper::getTableName(
+        $date->format('Y-m-d')
+    );
+
+    abort_unless(
+        Schema::hasTable($table),
+        404,
+        'Monthly SMS table not found.'
+    );
+
+    abort_unless(
+        Schema::hasColumn($table, 'branch') &&
+        Schema::hasColumn($table, 'recipient'),
+        422,
+        'Required branch or recipient column is missing.'
+    );
+
+    // Get unique phone numbers for selected branch.
+    $recipients = DB::table($table)
+        ->whereRaw(
+            'UPPER(TRIM(branch)) = ?',
+            [$branch]
+        )
+        ->whereNotNull('recipient')
+        ->whereRaw("TRIM(recipient) != ''")
+        ->selectRaw('TRIM(recipient) AS recipient')
+        ->groupByRaw('TRIM(recipient)')
+        ->orderBy('recipient')
+        ->get();
+
+    return [
+        'monthYear' => $date->format('F Y'),
+        'monthValue' => $date->format('Y-m'),
+        'table' => $table,
+        'branch' => $branch,
+        'recipients' => $recipients,
+        'total' => $recipients->count(),
+    ];
+}
+
+
+/**
+ * Export recipient report to Excel.
+ */
+public function recipientReportExcel(Request $request)
+{
+    $data = $this->getRecipientReportData($request);
+
+    $spreadsheet = new Spreadsheet();
+
+    $sheet = $spreadsheet->getActiveSheet();
+
+    $sheet->setTitle('Recipient Report');
+
+    // Header
+    $sheet->fromArray([
+        ['S.No', 'Branch', 'Phone Number']
+    ], null, 'A1');
+
+    $row = 2;
+
+    foreach ($data['recipients'] as $index => $item) {
+
+        $sheet->setCellValue("A{$row}", $index + 1);
+
+        $sheet->setCellValue(
+            "B{$row}",
+            $data['branch']
+        );
+
+        // Preserve phone number as text.
+        $sheet->setCellValueExplicit(
+            "C{$row}",
+            (string) $item->recipient,
+            DataType::TYPE_STRING
+        );
+
+        $row++;
+    }
+
+    $lastRow = max(1, $row - 1);
+
+    // Header styling
+    $sheet->getStyle('A1:C1')
+        ->getFont()
+        ->setBold(true);
+
+    $sheet->getStyle('A1:C1')
+        ->getAlignment()
+        ->setHorizontal(
+            \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+        );
+
+    // Borders
+    $sheet->getStyle("A1:C{$lastRow}")
+        ->getBorders()
+        ->getAllBorders()
+        ->setBorderStyle(
+            \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN
+        );
+
+    // Auto column width
+    foreach (['A', 'B', 'C'] as $column) {
+        $sheet->getColumnDimension($column)->setAutoSize(true);
+    }
+
+    $sheet->freezePane('A2');
+
+    $filename = 'recipient-report-'
+        . strtolower($data['branch'])
+        . '-' . $data['table'] . '.xlsx';
+
+    return response()->streamDownload(
+        function () use ($spreadsheet) {
+
+            $writer = new Xlsx($spreadsheet);
+
+            $writer->save('php://output');
+
+            $spreadsheet->disconnectWorksheets();
+        },
+        $filename,
+        [
+            'Content-Type' =>
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]
+    );
+}
+
+
+/**
+ * Export recipient report to PDF.
+ */
+public function recipientReportPdf(Request $request)
+{
+    $data = $this->getRecipientReportData($request);
+
+    $pdf = Pdf::loadView(
+        'smsexcel.recipient-report-pdf',
+        $data
+    )->setPaper('a4', 'portrait');
+
+    return $pdf->download(
+        'recipient-report-'
+        . strtolower($data['branch'])
+        . '-' . $data['table'] . '.pdf'
+    );
+}
+
+
+}
+

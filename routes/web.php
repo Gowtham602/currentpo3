@@ -183,6 +183,26 @@ Route::get('/sms-summary/export/excel', [SmsExcelImportController::class,'export
 
 Route::get('/sms-summary/export/pdf', [SmsExcelImportController::class,'exportPdf'])->name('sms-summary.export.pdf');
 
+//report select data and pdf
+
+Route::prefix('sms-recipient-report')->name('sms-recipient-report.')->group(function () {
+
+    Route::get('/', [
+        SmsExcelImportController::class,
+        'recipientReport'
+    ])->name('index');
+
+    Route::get('/excel', [
+        SmsExcelImportController::class,
+        'recipientReportExcel'
+    ])->name('excel');
+
+    Route::get('/pdf', [
+        SmsExcelImportController::class,
+        'recipientReportPdf'
+    ])->name('pdf');
+
+});
 
 // Route::prefix('sms')->name('sms.')->group(function () {
 

@@ -25,6 +25,8 @@ class SmsTableHelper
             CREATE TABLE IF NOT EXISTS `$table` (
                 id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 
+                 recipient VARCHAR(25) NULL,
+
                 status VARCHAR(50) NULL,
                 description VARCHAR(255) NULL,
 
